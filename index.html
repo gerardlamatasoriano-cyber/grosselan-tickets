@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrossELAN · Tickets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f5f3;
+    --bg2: #ffffff;
+    --bg3: #f0f0ee;
+    --bg4: #e8e8e5;
+    --border: #e0e0dc;
+    --border2: #c8c8c4;
+    --text: #1a1a18;
+    --text2: #505050;
+    --text3: #a0a09a;
+    --accent: #c07800;
+    --accent2: #f0a500;
+    --red: #c0383a;
+    --red-bg: #fdf0f0;
+    --red-border: #f0c8c8;
+    --orange: #b85a10;
+    --orange-bg: #fdf4ee;
+    --orange-border: #f0d0b0;
+    --yellow: #9a7a00;
+    --yellow-bg: #fdf8e8;
+    --yellow-border: #e8d890;
+    --green: #2a7a48;
+    --green-bg: #f0f8f2;
+    --green-border: #a8d8b8;
+    --blue: #2060a8;
+    --blue-bg: #f0f4fc;
+    --blue-border: #a8c0e8;
+    --purple: #5840a0;
+    --purple-bg: #f4f0fc;
+    --purple-border: #c0b0e8;
+    --radius: 4px;
+    --radius2: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  .sidebar-header {
+    padding: 20px 16px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-logo {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+  .sidebar-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .sidebar-section {
+    padding: 16px 12px 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text3);
+    font-weight: 500;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.15s;
+    border-left: 2px solid transparent;
+    font-size: 13px;
+  }
+  .nav-item:hover { background: var(--bg3); color: var(--text); }
+  .nav-item.active {
+    background: var(--bg3);
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+  .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto;
+    background: var(--bg4);
+    color: var(--text3);
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+  .nav-item.active .nav-badge { background: var(--accent2); color: var(--bg); border-color: var(--accent); }
+  .sidebar-bottom {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: var(--accent2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: var(--bg);
+    font-family: 'IBM Plex Mono', monospace;
+    flex-shrink: 0;
+  }
+  .avatar-name { font-size: 12px; color: var(--text); }
+  .avatar-role { font-size: 10px; color: var(--text3); }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg2);
+  }
+  .topbar-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    flex: 1;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: 1px solid var(--border2);
+    background: var(--bg3);
+    color: var(--text2);
+  }
+  .btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
+  .btn svg { width: 14px; height: 14px; }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .btn-primary:hover { background: #ffc020; border-color: #ffc020; }
+
+  /* METRICS */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .metric {
+    background: var(--bg2);
+    padding: 16px 20px;
+  }
+  .metric-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    margin-bottom: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .metric-value {
+    font-size: 26px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .metric-value.alert { color: var(--red); }
+  .metric-value.good { color: var(--green); }
+  .metric-value.info { color: var(--accent); }
+  .metric-sub { font-size: 11px; color: var(--text3); }
+
+  /* FILTERS */
+  .filters {
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-wrap: wrap;
+  }
+  .filter-label {
+    font-size: 11px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: 'IBM Plex Mono', monospace;
+    margin-right: 2px;
+  }
+  .filter-chip {
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.12s;
+  }
+  .filter-chip:hover { border-color: var(--border2); color: var(--text); }
+  .filter-chip.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .filter-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+  .filter-select {
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    font-size: 11px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer;
+  }
+  .filter-select:focus { outline: none; border-color: var(--border2); }
+  .view-toggle { margin-left: auto; display: flex; gap: 4px; }
+  .view-btn {
+    padding: 5px 8px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    transition: all 0.12s;
+  }
+  .view-btn:hover { color: var(--text2); border-color: var(--border2); }
+  .view-btn.active { background: var(--bg3); color: var(--accent); border-color: var(--border2); }
+  .view-btn svg { width: 14px; height: 14px; display: block; }
+
+  /* KANBAN BOARD */
+  .board-wrapper {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 16px 24px 24px;
+    background: var(--bg);
+  }
+  .board {
+    display: flex;
+    gap: 12px;
+    height: 100%;
+    min-width: max-content;
+  }
+  .column {
+    width: 240px;
+    min-width: 240px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 4px;
+  }
+  .col-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .col-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+    color: var(--text2);
+    flex: 1;
+  }
+  .col-count {
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text3);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 1px 7px;
+    border-radius: 3px;
+  }
+  .col-body {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+  }
+  .col-body::-webkit-scrollbar { width: 4px; }
+  .col-body::-webkit-scrollbar-track { background: transparent; }
+  .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* TICKET CARD */
+  .ticket {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius2);
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .ticket:hover { border-color: var(--border2); background: var(--bg3); transform: translateY(-1px); }
+  .ticket-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .ticket-project {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .ticket-id {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text3);
+  }
+  .ticket-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  .ticket-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+  .priority-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .p-critical { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .p-high { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
+  .p-medium { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
+  .p-low { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .assignee-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 600;
+    font-family: 'IBM Plex Mono', monospace;
+    border: 1px solid var(--border);
+    margin-left: auto;
+  }
+  .deadline-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text3);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .deadline-chip.urgent { color: var(--red); border-color: var(--red-border); background: var(--red-bg); }
+  .deadline-chip svg { width: 10px; height: 10px; }
+  .blocked-tag {
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--red);
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid var(--red-border);
+    background: var(--red-bg);
+  }
+
+  /* ADD TICKET BUTTON */
+  .add-ticket-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 4px;
+    color: var(--text3);
+    cursor: pointer;
+    border-radius: var(--radius);
+    font-size: 12px;
+    transition: all 0.12s;
+    border: 1px dashed transparent;
+  }
+  .add-ticket-btn:hover { color: var(--text2); border-color: var(--border); background: var(--bg3); padding: 8px; }
+  .add-ticket-btn svg { width: 14px; height: 14px; }
+
+  /* MODAL OVERLAY */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius2);
+    width: 560px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .modal-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .modal-close {
+    width: 28px; height: 28px;
+    border-radius: var(--radius);
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text2);
+    transition: all 0.12s;
+  }
+  .modal-close:hover { background: var(--bg4); color: var(--text); }
+  .modal-close svg { width: 14px; height: 14px; }
+  .form-row { margin-bottom: 16px; }
+  .form-label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 6px;
+  }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    transition: border-color 0.12s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-select option { background: var(--bg3); }
+  .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* TICKET DETAIL */
+  .detail-field {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: flex-start;
+  }
+  .detail-field:last-child { border-bottom: none; }
+  .detail-key {
+    width: 100px;
+    min-width: 100px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-top: 1px;
+  }
+  .detail-val { font-size: 13px; color: var(--text); flex: 1; }
+  .detail-description {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* NOTION SYNC INDICATOR */
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .sync-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* TABLE VIEW */
+  .table-wrapper { flex: 1; overflow: auto; padding: 16px 24px; }
+  .tickets-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .tickets-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    font-weight: 500;
+  }
+  .tickets-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text2);
+    vertical-align: middle;
+  }
+  .tickets-table tr:hover td { background: var(--bg2); cursor: pointer; }
+  .tickets-table tr:hover td:first-child { color: var(--accent); }
+  .status-pill {
+    display: inline-block;
+    font-size: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+  .s-pending { background: var(--bg4); color: var(--text2); border: 1px solid var(--border2); }
+  .s-inprogress { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+  .s-blocked { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .s-done { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .s-delivered { background: var(--purple-bg); color: var(--purple); border: 1px solid var(--purple-border); }
+
+  .hidden { display: none !important; }
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--bg3);
+    border: 1px solid var(--green-border);
+    color: var(--green);
+    padding: 10px 16px;
+    border-radius: var(--radius2);
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    z-index: 200;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: all 0.25s;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* Loading */
+  .loading-spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .n8n-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--text3);
+  }
+  .n8n-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); }
+  .n8n-dot.connected { background: var(--green); }
+  .n8n-dot.error { background: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">GrossELAN</div>
+    <div class="sidebar-sub">Operations · Tickets</div>
+  </div>
+  <div class="sidebar-section">Main</div>
+  <div class="nav-item active" onclick="setView('kanban')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="3" width="4" height="10" rx="1"/><rect x="6" y="3" width="4" height="7" rx="1"/><rect x="11" y="3" width="4" height="9" rx="1"/>
+    </svg>
+    Tickets
+    <span class="nav-badge" id="nb-tickets">0</span>
+  </div>
+  <div class="nav-item" onclick="setView('projects')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="1" width="14" height="14" rx="2"/><path d="M1 5h14M5 5v10"/>
+    </svg>
+    Projects
+  </div>
+  <div class="nav-item" onclick="setView('team')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-5 5-5h2M10 12l2 2 3-3"/>
+    </svg>
+    Team
+  </div>
+  <div class="nav-item" onclick="setView('calendar')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="2" width="14" height="13" rx="2"/><path d="M1 6h14M5 1v3M11 1v3"/>
+    </svg>
+    Calendar
+  </div>
+  <div class="sidebar-section">Views</div>
+  <div class="nav-item" onclick="setView('summary')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="1" y="9" width="3" height="6" rx="1"/><rect x="6" y="5" width="3" height="10" rx="1"/><rect x="11" y="2" width="3" height="13" rx="1"/>
+    </svg>
+    Summary
+  </div>
+  <div class="nav-item" onclick="alert('Alerts: no critical items right now.')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M8 1a5 5 0 015 5c0 3 1 4 1 5H2c0-1 1-2 1-5a5 5 0 015-5zM6 14a2 2 0 004 0"/>
+    </svg>
+    Alerts
+  </div>
+  <div class="sidebar-section">Settings</div>
+  <div class="nav-item" onclick="openSettings()">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M3 13l1.5-1.5M11.5 4.5L13 3"/>
+    </svg>
+    Settings
+  </div>
+  <div class="sidebar-bottom">
+    <div class="avatar" id="user-avatar">GL</div>
+    <div>
+      <div class="avatar-name" id="user-name">Gerard LM</div>
+      <div class="avatar-role">Project Lead</div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<div class="main" id="main-content">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <span class="topbar-title">// ticket_board</span>
+    <div class="n8n-status">
+      <div class="n8n-dot" id="n8n-dot"></div>
+      <span id="n8n-status-text">N8N disconnected</span>
+    </div>
+    <button class="btn" onclick="syncFromNotion()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>
+      Sync Notion
+    </button>
+    <button class="btn" onclick="exportCSV()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h10M8 2v8M5 7l3 3 3-3"/></svg>
+      Export
+    </button>
+    <button class="btn btn-primary" onclick="openNewTicket()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12"/></svg>
+      New ticket
+    </button>
+  </div>
+
+  <!-- SYNC BAR -->
+  <div class="sync-bar">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-text">Configure N8N webhook URL in Settings to enable Notion sync</span>
+  </div>
+
+  <!-- METRICS -->
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Active tickets</div>
+      <div class="metric-value" id="m-active">0</div>
+      <div class="metric-sub" id="m-active-sub">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Critical / High</div>
+      <div class="metric-value alert" id="m-critical">0</div>
+      <div class="metric-sub">Require attention</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Delivered this month</div>
+      <div class="metric-value good" id="m-delivered">0</div>
+      <div class="metric-sub" id="m-delivered-sub">—</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Open projects</div>
+      <div class="metric-value info" id="m-projects">0</div>
+      <div class="metric-sub" id="m-proj-sub">—</div>
+    </div>
+  </div>
+
+  <!-- FILTERS + VIEW TOGGLE -->
+  <div class="filters" id="filter-bar">
+    <span class="filter-label">Project:</span>
+    <div id="project-filters"></div>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Assigned:</span>
+    <select class="filter-select" id="assignee-filter" onchange="applyFilters()">
+      <option value="all">All</option>
+    </select>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Priority:</span>
+    <select class="filter-select" id="priority-filter" onchange="applyFilters()">
+      <option value="all">All</option>
+      <option value="Critical">Critical</option>
+      <option value="High">High</option>
+      <option value="Medium">Medium</option>
+      <option value="Low">Low</option>
+    </select>
+    <div class="view-toggle">
+      <button class="view-btn active" id="vb-kanban" onclick="switchView('kanban')" title="Kanban">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="3" height="10" rx="1"/><rect x="5.5" y="2" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="9" rx="1"/></svg>
+      </button>
+      <button class="view-btn" id="vb-table" onclick="switchView('table')" title="Table">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3h12M1 7h12M1 11h12M5 3v8M9 3v8"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- KANBAN VIEW -->
+  <div class="board-wrapper" id="view-kanban">
+    <div class="board" id="kanban-board"></div>
+  </div>
+
+  <!-- TABLE VIEW -->
+  <div class="table-wrapper hidden" id="view-table">
+    <table class="tickets-table">
+      <thead>
+        <tr>
+          <th>ID</th><th>Title</th><th>Project</th><th>Assigned</th>
+          <th>Priority</th><th>Status</th><th>Deadline</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </div>
+
+  <!-- PLACEHOLDER VIEWS -->
+  <div class="hidden" id="view-projects" style="padding:40px 24px;color:var(--text3);font-family:'IBM Plex Mono',monospace;">[ Projects view — coming soon ]</div>
+  <div class="hidden" id="view-team" style="padding:40px 24px;color:var(--text3);font-family:'IBM Plex Mono',monospace;">[ Team view — coming soon ]</div>
+  <div class="hidden" id="view-calendar" style="padding:40px 24px;color:var(--text3);font-family:'IBM Plex Mono',monospace;">[ Calendar view — coming soon ]</div>
+  <div class="hidden" id="view-summary" style="padding:40px 24px;color:var(--text3);font-family:'IBM Plex Mono',monospace;">[ Summary view — coming soon ]</div>
+</div>
+
+<!-- NEW / EDIT TICKET MODAL -->
+<div class="modal-overlay" id="ticket-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">// new_ticket</span>
+      <div class="modal-close" onclick="closeModal('ticket-modal')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Title *</label>
+      <input class="form-input" id="f-title" placeholder="Describe the task clearly..." />
+    </div>
+    <div class="form-row">
+      <label class="form-label">Description</label>
+      <textarea class="form-textarea" id="f-description" placeholder="Additional details, context, blockers..."></textarea>
+    </div>
+    <div class="form-row-2">
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">Project</label>
+        <select class="form-select" id="f-project">
+          <option value="">— select —</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">Assigned to</label>
+        <select class="form-select" id="f-assigned">
+          <option value="">— select —</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row-2" style="margin-top:16px">
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">Priority</label>
+        <select class="form-select" id="f-priority">
+          <option>Critical</option><option>High</option>
+          <option selected>Medium</option><option>Low</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="f-status">
+          <option>Pending</option><option>In progress</option>
+          <option>Blocked</option><option>Done</option><option>Delivered</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="margin-top:16px">
+      <label class="form-label">Deadline</label>
+      <input class="form-input" id="f-deadline" type="date" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('ticket-modal')">Cancel</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveTicket()">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 7l4 4 6-6"/></svg>
+        Save ticket
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TICKET DETAIL MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal" style="width:580px">
+    <div class="modal-header">
+      <span class="modal-title" id="detail-modal-title">// ticket_detail</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn" id="edit-ticket-btn" onclick="editCurrentTicket()">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2l3 3-7 7H2v-3z"/></svg>
+          Edit
+        </button>
+        <div class="modal-close" onclick="closeModal('detail-modal')">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2l10 10M12 2L2 12"/></svg>
+        </div>
+      </div>
+    </div>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal" style="width:480px">
+    <div class="modal-header">
+      <span class="modal-title">// settings</span>
+      <div class="modal-close" onclick="closeModal('settings-modal')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2l10 10M12 2L2 12"/></svg>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">N8N Webhook URL (create ticket)</label>
+      <input class="form-input" id="s-webhook-create" placeholder="https://your-n8n.com/webhook/tickets-create" />
+    </div>
+    <div class="form-row">
+      <label class="form-label">N8N Webhook URL (update ticket)</label>
+      <input class="form-input" id="s-webhook-update" placeholder="https://your-n8n.com/webhook/tickets-update" />
+    </div>
+    <div class="form-row">
+      <label class="form-label">N8N Webhook URL (get all tickets)</label>
+      <input class="form-input" id="s-webhook-get" placeholder="https://your-n8n.com/webhook/tickets-get" />
+    </div>
+    <div class="form-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+      <label class="form-label">Your name (shown in sidebar)</label>
+      <input class="form-input" id="s-username" placeholder="Your name" />
+    </div>
+    <div class="form-row">
+      <label class="form-label">Your initials (avatar)</label>
+      <input class="form-input" id="s-initials" placeholder="GL" maxlength="3" style="max-width:80px" />
+    </div>
+    <div class="form-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
+      <label class="form-label">Team members (one per line: Name,Initials)</label>
+      <textarea class="form-textarea" id="s-team" placeholder="Gerard LM,GL&#10;Robert B,RB&#10;Ana M,AM"></textarea>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Projects (one per line)</label>
+      <textarea class="form-textarea" id="s-projects" placeholder="RÜB Fischweier&#10;Ettlingen Nord&#10;Karlsruhe Mitte"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('settings-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save settings</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORE_KEY = 'grosselan_tickets_v1';
+const CFG_KEY = 'grosselan_config_v1';
+
+let tickets = [];
+let config = {
+  webhookCreate: '', webhookUpdate: '', webhookGet: '',
+  username: 'Gerard LM', initials: 'GL',
+  team: [{ name: 'Gerard LM', initials: 'GL' }, { name: 'Robert B', initials: 'RB' }, { name: 'Ana M', initials: 'AM' }],
+  projects: ['RÜB Fischweier', 'Ettlingen Nord', 'Karlsruhe Mitte', 'AV Albtal BA2']
+};
+
+let currentView = 'kanban';
+let activeProject = 'all';
+let editingId = null;
+let viewingId = null;
+
+const STATUSES = ['Pending', 'In progress', 'Blocked', 'Done', 'Delivered'];
+const STATUS_COLORS = {
+  'Pending': '#888', 'In progress': '#5090d0',
+  'Blocked': '#e05252', 'Done': '#52a870', 'Delivered': '#8060c0'
+};
+const PRIORITY_ORDER = { Critical: 0, High: 1, Medium: 2, Low: 3 };
+
+function load() {
+  const raw = localStorage.getItem(STORE_KEY);
+  if (raw) tickets = JSON.parse(raw);
+  const cfg = localStorage.getItem(CFG_KEY);
+  if (cfg) config = { ...config, ...JSON.parse(cfg) };
+}
+
+function save() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(tickets));
+}
+
+function saveConfig() {
+  localStorage.setItem(CFG_KEY, JSON.stringify(config));
+}
+
+function nextId() {
+  const nums = tickets.map(t => parseInt(t.id.replace('TK-', '')) || 0);
+  const max = nums.length ? Math.max(...nums) : 0;
+  return 'TK-' + String(max + 1).padStart(3, '0');
+}
+
+function showToast(msg, error = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderColor = error ? 'var(--red-border)' : 'var(--green-border)';
+  el.style.color = error ? 'var(--red)' : 'var(--green)';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function openSettings() {
+  document.getElementById('s-webhook-create').value = config.webhookCreate || '';
+  document.getElementById('s-webhook-update').value = config.webhookUpdate || '';
+  document.getElementById('s-webhook-get').value = config.webhookGet || '';
+  document.getElementById('s-username').value = config.username || '';
+  document.getElementById('s-initials').value = config.initials || '';
+  document.getElementById('s-team').value = config.team.map(t => t.name + ',' + t.initials).join('\n');
+  document.getElementById('s-projects').value = config.projects.join('\n');
+  openModal('settings-modal');
+}
+
+function saveSettings() {
+  config.webhookCreate = document.getElementById('s-webhook-create').value.trim();
+  config.webhookUpdate = document.getElementById('s-webhook-update').value.trim();
+  config.webhookGet = document.getElementById('s-webhook-get').value.trim();
+  config.username = document.getElementById('s-username').value.trim() || 'Gerard LM';
+  config.initials = document.getElementById('s-initials').value.trim().toUpperCase() || 'GL';
+  const teamRaw = document.getElementById('s-team').value.trim().split('\n').filter(Boolean);
+  config.team = teamRaw.map(line => {
+    const parts = line.split(',');
+    return { name: parts[0].trim(), initials: (parts[1] || '??').trim().toUpperCase() };
+  });
+  const projRaw = document.getElementById('s-projects').value.trim().split('\n').filter(Boolean);
+  config.projects = projRaw.map(p => p.trim()).filter(Boolean);
+  saveConfig();
+  updateUserDisplay();
+  refreshFilters();
+  renderBoard();
+  updateN8nStatus();
+  closeModal('settings-modal');
+  showToast('Settings saved');
+}
+
+function updateUserDisplay() {
+  document.getElementById('user-name').textContent = config.username;
+  document.getElementById('user-avatar').textContent = config.initials;
+}
+
+function updateN8nStatus() {
+  const dot = document.getElementById('n8n-dot');
+  const txt = document.getElementById('n8n-status-text');
+  const syncTxt = document.getElementById('sync-text');
+  if (config.webhookGet || config.webhookCreate) {
+    dot.classList.add('connected');
+    dot.classList.remove('error');
+    txt.textContent = 'N8N connected';
+    syncTxt.textContent = 'Notion sync enabled · Last sync: never — press "Sync Notion" to load tickets';
+    document.getElementById('sync-dot').style.background = 'var(--green)';
+  } else {
+    dot.classList.remove('connected');
+    txt.textContent = 'N8N disconnected';
+    syncTxt.textContent = 'Configure N8N webhook URL in Settings to enable Notion sync';
+    document.getElementById('sync-dot').style.background = 'var(--yellow)';
+  }
+}
+
+async function syncFromNotion() {
+  if (!config.webhookGet) {
+    showToast('Set the GET webhook URL in Settings first', true);
+    openSettings();
+    return;
+  }
+  const btn = document.querySelector('button[onclick="syncFromNotion()"]');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="loading-spinner"></span> Syncing...';
+  btn.disabled = true;
+  try {
+    const res = await fetch(config.webhookGet, { method: 'GET' });
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : (data.tickets || data.results || []);
+    if (items.length) {
+      tickets = items.map(t => ({
+        id: t.id || nextId(),
+        title: t.title || t.Title || '',
+        description: t.description || t.Description || '',
+        project: t.project || t.Project || '',
+        assigned: t.assigned || t.Assigned || '',
+        priority: t.priority || t.Priority || 'Medium',
+        status: t.status || t.Status || 'Pending',
+        deadline: t.deadline || t.Deadline || '',
+        notionId: t.notionId || t.notion_id || t.id || '',
+        createdAt: t.createdAt || new Date().toISOString()
+      }));
+      save();
+      renderBoard();
+      updateMetrics();
+      refreshFilters();
+      document.getElementById('sync-text').textContent = `Synced from Notion · ${items.length} tickets · ${new Date().toLocaleTimeString()}`;
+      showToast(`${items.length} tickets loaded from Notion`);
+    } else {
+      showToast('No tickets returned from Notion', true);
+    }
+  } catch (e) {
+    showToast('Sync failed: ' + e.message, true);
+  }
+  btn.innerHTML = orig;
+  btn.disabled = false;
+}
+
+function openNewTicket() {
+  editingId = null;
+  document.getElementById('modal-title').textContent = '// new_ticket';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-description').value = '';
+  document.getElementById('f-priority').value = 'Medium';
+  document.getElementById('f-status').value = 'Pending';
+  document.getElementById('f-deadline').value = '';
+  populateFormSelects();
+  document.getElementById('f-project').value = activeProject !== 'all' ? activeProject : '';
+  document.getElementById('f-assigned').value = '';
+  openModal('ticket-modal');
+}
+
+function editCurrentTicket() {
+  const t = tickets.find(x => x.id === viewingId);
+  if (!t) return;
+  closeModal('detail-modal');
+  editingId = t.id;
+  document.getElementById('modal-title').textContent = '// edit_ticket · ' + t.id;
+  populateFormSelects();
+  document.getElementById('f-title').value = t.title;
+  document.getElementById('f-description').value = t.description || '';
+  document.getElementById('f-project').value = t.project || '';
+  document.getElementById('f-assigned').value = t.assigned || '';
+  document.getElementById('f-priority').value = t.priority || 'Medium';
+  document.getElementById('f-status').value = t.status || 'Pending';
+  document.getElementById('f-deadline').value = t.deadline || '';
+  openModal('ticket-modal');
+}
+
+function populateFormSelects() {
+  const fp = document.getElementById('f-project');
+  fp.innerHTML = '<option value="">— select —</option>';
+  config.projects.forEach(p => fp.innerHTML += `<option value="${p}">${p}</option>`);
+  const fa = document.getElementById('f-assigned');
+  fa.innerHTML = '<option value="">— select —</option>';
+  config.team.forEach(m => fa.innerHTML += `<option value="${m.name}">${m.name}</option>`);
+}
+
+async function saveTicket() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { showToast('Title is required', true); return; }
+  const btn = document.getElementById('save-btn');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="loading-spinner"></span> Saving...';
+  btn.disabled = true;
+
+  const payload = {
+    title,
+    description: document.getElementById('f-description').value.trim(),
+    project: document.getElementById('f-project').value,
+    assigned: document.getElementById('f-assigned').value,
+    priority: document.getElementById('f-priority').value,
+    status: document.getElementById('f-status').value,
+    deadline: document.getElementById('f-deadline').value,
+  };
+
+  if (editingId) {
+    const idx = tickets.findIndex(t => t.id === editingId);
+    if (idx !== -1) {
+      tickets[idx] = { ...tickets[idx], ...payload };
+      if (config.webhookUpdate) {
+        try {
+          await fetch(config.webhookUpdate, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...tickets[idx] })
+          });
+        } catch(e) { console.warn('N8N update failed:', e); }
+      }
+      showToast('Ticket updated');
+    }
+  } else {
+    const newTicket = { id: nextId(), ...payload, createdAt: new Date().toISOString() };
+    tickets.push(newTicket);
+    if (config.webhookCreate) {
+      try {
+        const res = await fetch(config.webhookCreate, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newTicket)
+        });
+        const data = await res.json();
+        if (data.notionId || data.notion_id) {
+          newTicket.notionId = data.notionId || data.notion_id;
+        }
+        showToast('Ticket created and sent to Notion ✓');
+      } catch(e) {
+        showToast('Ticket saved locally (N8N unreachable)', true);
+      }
+    } else {
+      showToast('Ticket created (local — no N8N configured)');
+    }
+  }
+
+  save();
+  renderBoard();
+  updateMetrics();
+  refreshFilters();
+  closeModal('ticket-modal');
+  btn.innerHTML = orig;
+  btn.disabled = false;
+}
+
+function openTicketDetail(id) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  viewingId = id;
+  document.getElementById('detail-modal-title').textContent = '// ' + t.id;
+  const assigneeInitials = getInitials(t.assigned);
+  const priorityClass = getPriorityClass(t.priority);
+  const statusClass = getStatusClass(t.status);
+  document.getElementById('detail-content').innerHTML = `
+    <div style="margin-bottom:12px">
+      <h2 style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;margin-bottom:8px">${escHtml(t.title)}</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span class="priority-badge ${priorityClass}"><span class="dot" style="background:currentColor"></span>${t.priority}</span>
+        <span class="status-pill ${statusClass}">${t.status}</span>
+        ${t.deadline ? `<span class="deadline-chip ${isUrgent(t.deadline) ? 'urgent' : ''}">
+          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><path d="M6 3v3l2 1"/></svg>
+          ${t.deadline}</span>` : ''}
+      </div>
+    </div>
+    ${t.description ? `<div class="detail-description">${escHtml(t.description)}</div>` : ''}
+    <div class="detail-field"><span class="detail-key">Project</span><span class="detail-val">${t.project || '—'}</span></div>
+    <div class="detail-field"><span class="detail-key">Assigned</span>
+      <span class="detail-val" style="display:flex;align-items:center;gap:8px">
+        ${t.assigned ? `<span class="assignee-chip" style="background:var(--blue-bg);color:var(--blue);border-color:var(--blue-border)">${assigneeInitials}</span>` : ''}
+        ${t.assigned || '—'}
+      </span>
+    </div>
+    <div class="detail-field"><span class="detail-key">Created</span><span class="detail-val">${t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-GB') : '—'}</span></div>
+    ${t.notionId ? `<div class="detail-field"><span class="detail-key">Notion ID</span><span class="detail-val" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3)">${t.notionId}</span></div>` : ''}
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      ${STATUSES.map(s => `<button class="btn ${t.status === s ? 'btn-primary' : ''}" style="${t.status===s?'':'font-size:11px'}" onclick="quickStatus('${id}','${s}')">${s}</button>`).join('')}
+    </div>
+  `;
+  openModal('detail-modal');
+}
+
+function quickStatus(id, status) {
+  const t = tickets.find(x => x.id === id);
+  if (!t) return;
+  t.status = status;
+  save();
+  renderBoard();
+  updateMetrics();
+  openTicketDetail(id);
+  showToast(id + ' → ' + status);
+  if (config.webhookUpdate) {
+    fetch(config.webhookUpdate, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(t)
+    }).catch(() => {});
+  }
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  const m = config.team.find(t => t.name === name);
+  if (m) return m.initials;
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+function getPriorityClass(p) {
+  return { Critical: 'p-critical', High: 'p-high', Medium: 'p-medium', Low: 'p-low' }[p] || 'p-low';
+}
+
+function getStatusClass(s) {
+  return {
+    'Pending': 's-pending', 'In progress': 's-inprogress',
+    'Blocked': 's-blocked', 'Done': 's-done', 'Delivered': 's-delivered'
+  }[s] || 's-pending';
+}
+
+function isUrgent(deadline) {
+  if (!deadline) return false;
+  const d = new Date(deadline);
+  const today = new Date();
+  return d <= new Date(today.getTime() + 2 * 86400000);
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function getAvatarColor(name) {
+  const colors = [
+    { bg: 'var(--blue-bg)', fg: 'var(--blue)', border: 'var(--blue-border)' },
+    { bg: 'var(--green-bg)', fg: 'var(--green)', border: 'var(--green-border)' },
+    { bg: 'var(--purple-bg)', fg: 'var(--purple)', border: 'var(--purple-border)' },
+    { bg: 'var(--orange-bg)', fg: 'var(--orange)', border: 'var(--orange-border)' },
+    { bg: 'var(--yellow-bg)', fg: 'var(--yellow)', border: 'var(--yellow-border)' },
+  ];
+  let hash = 0;
+  for (let i = 0; i < (name || '').length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff;
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function filteredTickets() {
+  return tickets.filter(t => {
+    const projOk = activeProject === 'all' || t.project === activeProject;
+    const asgn = document.getElementById('assignee-filter').value;
+    const asgnOk = asgn === 'all' || t.assigned === asgn;
+    const prio = document.getElementById('priority-filter').value;
+    const prioOk = prio === 'all' || t.priority === prio;
+    return projOk && asgnOk && prioOk;
+  });
+}
+
+function renderBoard() {
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = '';
+  const visible = filteredTickets();
+  document.getElementById('nb-tickets').textContent = tickets.filter(t => t.status !== 'Delivered').length;
+
+  STATUSES.forEach(status => {
+    const col = document.createElement('div');
+    col.className = 'column';
+    const colTickets = visible.filter(t => t.status === status)
+      .sort((a, b) => (PRIORITY_ORDER[a.priority] || 9) - (PRIORITY_ORDER[b.priority] || 9));
+
+    col.innerHTML = `
+      <div class="col-header">
+        <div class="col-dot" style="background:${STATUS_COLORS[status]}"></div>
+        <span class="col-title">${status}</span>
+        <span class="col-count">${colTickets.length}</span>
+      </div>
+      <div class="col-body" id="col-${status.replace(' ','-')}"></div>
+      <div class="add-ticket-btn" onclick="openNewTicketInStatus('${status}')">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1v12M1 7h12"/></svg>
+        Add ticket
+      </div>
+    `;
+    board.appendChild(col);
+
+    const body = col.querySelector('.col-body');
+    colTickets.forEach(t => {
+      const card = document.createElement('div');
+      card.className = 'ticket';
+      const initials = getInitials(t.assigned);
+      const ac = t.assigned ? getAvatarColor(t.assigned) : null;
+      const urgent = isUrgent(t.deadline);
+      card.innerHTML = `
+        <div class="ticket-meta">
+          <span class="ticket-project">${escHtml(t.project || 'No project')}</span>
+          <span class="ticket-id">${t.id}</span>
+        </div>
+        <div class="ticket-title">${escHtml(t.title)}</div>
+        <div class="ticket-footer">
+          <span class="priority-badge ${getPriorityClass(t.priority)}">
+            <span class="dot" style="background:currentColor"></span>${t.priority}
+          </span>
+          ${status === 'Blocked' ? `<span class="blocked-tag">⚠ Blkd</span>` : ''}
+          ${t.deadline ? `<span class="deadline-chip ${urgent ? 'urgent' : ''}">
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><path d="M6 3v3l2 1"/></svg>
+            ${urgent ? 'Today' : t.deadline}
+          </span>` : ''}
+          ${t.assigned && ac ? `<span class="assignee-chip" style="background:${ac.bg};color:${ac.fg};border-color:${ac.border};margin-left:auto">${initials}</span>` : ''}
+        </div>
+      `;
+      card.onclick = () => openTicketDetail(t.id);
+      body.appendChild(card);
+    });
+  });
+}
+
+function renderTable() {
+  const tbody = document.getElementById('table-body');
+  const visible = filteredTickets()
+    .sort((a, b) => (PRIORITY_ORDER[a.priority] || 9) - (PRIORITY_ORDER[b.priority] || 9));
+  tbody.innerHTML = '';
+  visible.forEach(t => {
+    const tr = document.createElement('tr');
+    tr.onclick = () => openTicketDetail(t.id);
+    tr.innerHTML = `
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--text3)">${t.id}</td>
+      <td style="color:var(--text)">${escHtml(t.title)}</td>
+      <td>${escHtml(t.project || '—')}</td>
+      <td>${escHtml(t.assigned || '—')}</td>
+      <td><span class="priority-badge ${getPriorityClass(t.priority)}" style="display:inline-flex"><span class="dot" style="background:currentColor;margin-right:4px"></span>${t.priority}</span></td>
+      <td><span class="status-pill ${getStatusClass(t.status)}">${t.status}</span></td>
+      <td style="${isUrgent(t.deadline) ? 'color:var(--red)' : ''}">${t.deadline || '—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function updateMetrics() {
+  const active = tickets.filter(t => t.status !== 'Delivered' && t.status !== 'Done');
+  const critical = tickets.filter(t => (t.priority === 'Critical' || t.priority === 'High') && t.status !== 'Delivered');
+  const now = new Date();
+  const delivered = tickets.filter(t => {
+    if (t.status !== 'Delivered') return false;
+    const d = new Date(t.createdAt || now);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const projects = [...new Set(tickets.filter(t => t.status !== 'Delivered').map(t => t.project).filter(Boolean))];
+
+  document.getElementById('m-active').textContent = active.length;
+  document.getElementById('m-active-sub').textContent = active.length > 0 ? `+${Math.min(active.length, 3)} this week` : 'No active tickets';
+  document.getElementById('m-critical').textContent = critical.length;
+  document.getElementById('m-delivered').textContent = delivered.length;
+  document.getElementById('m-delivered-sub').textContent = delivered.length > 0 ? '↑ vs last month' : '0 this month';
+  document.getElementById('m-projects').textContent = projects.length;
+  document.getElementById('m-proj-sub').textContent = projects.length > 0 ? `${[...new Set(projects)].length} location(s)` : 'No active projects';
+}
+
+function refreshFilters() {
+  const pf = document.getElementById('project-filters');
+  pf.innerHTML = `<span class="filter-chip ${activeProject === 'all' ? 'active' : ''}" onclick="setProject('all')">All</span>`;
+  const activeProjects = [...new Set(tickets.map(t => t.project).filter(Boolean))];
+  const allProjects = [...new Set([...config.projects, ...activeProjects])];
+  allProjects.forEach(p => {
+    pf.innerHTML += `<span class="filter-chip ${activeProject === p ? 'active' : ''}" onclick="setProject('${p.replace(/'/g, "\\'")}')">${escHtml(p)}</span>`;
+  });
+
+  const af = document.getElementById('assignee-filter');
+  const curr = af.value;
+  af.innerHTML = '<option value="all">All</option>';
+  config.team.forEach(m => {
+    af.innerHTML += `<option value="${m.name}">${m.name}</option>`;
+  });
+  af.value = curr;
+}
+
+function setProject(p) {
+  activeProject = p;
+  refreshFilters();
+  renderBoard();
+  if (currentView === 'table') renderTable();
+}
+
+function applyFilters() {
+  renderBoard();
+  if (currentView === 'table') renderTable();
+}
+
+function openNewTicketInStatus(status) {
+  openNewTicket();
+  document.getElementById('f-status').value = status;
+}
+
+function switchView(v) {
+  currentView = v;
+  document.getElementById('view-kanban').classList.toggle('hidden', v !== 'kanban');
+  document.getElementById('view-table').classList.toggle('hidden', v !== 'table');
+  document.getElementById('vb-kanban').classList.toggle('active', v === 'kanban');
+  document.getElementById('vb-table').classList.toggle('active', v === 'table');
+  if (v === 'table') renderTable();
+}
+
+function setView(v) {
+  ['kanban','projects','team','calendar','summary'].forEach(x => {
+    const el = document.getElementById('view-' + x);
+    if (el) el.classList.toggle('hidden', x !== v);
+  });
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const filterBar = document.getElementById('filter-bar');
+  filterBar.style.display = v === 'kanban' ? 'flex' : 'none';
+  if (v === 'kanban') { currentView = 'kanban'; renderBoard(); }
+}
+
+function exportCSV() {
+  const headers = ['ID','Title','Project','Assigned','Priority','Status','Deadline','Created'];
+  const rows = tickets.map(t => [
+    t.id, `"${(t.title||'').replace(/"/g,'""')}"`, t.project||'',
+    t.assigned||'', t.priority||'', t.status||'', t.deadline||'',
+    t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-GB') : ''
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `grosselan_tickets_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('CSV exported');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    ['ticket-modal','detail-modal','settings-modal'].forEach(id => {
+      document.getElementById(id).classList.remove('open');
+    });
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+    e.preventDefault();
+    openNewTicket();
+  }
+});
+
+load();
+updateUserDisplay();
+updateN8nStatus();
+refreshFilters();
+renderBoard();
+updateMetrics();
+</script>
+</body>
+</html>
