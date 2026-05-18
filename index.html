@@ -911,6 +911,10 @@
           <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 2l3 3-7 7H2v-3z"/></svg>
           Edit
         </button>
+        <button class="btn" id="delete-ticket-btn" onclick="deleteCurrentTicket()" style="color:var(--red);border-color:var(--red-border)">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3h10M5 3V2h4v1M6 6v4M8 6v4M3 3l1 9h6l1-9"/></svg>
+          Delete
+        </button>
         <div class="modal-close" onclick="closeModal('detail-modal')">
           <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 2l10 10M12 2L2 12"/></svg>
         </div>
@@ -940,6 +944,10 @@
     <div class="form-row">
       <label class="form-label">N8N Webhook URL (get all tickets)</label>
       <input class="form-input" id="s-webhook-get" placeholder="https://your-n8n.com/webhook/tickets-get" />
+    </div>
+    <div class="form-row">
+      <label class="form-label">N8N Webhook URL (delete ticket)</label>
+      <input class="form-input" id="s-webhook-delete" placeholder="https://your-n8n.com/webhook/tickets-delete" />
     </div>
     <div class="form-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
       <label class="form-label">Your name (shown in sidebar)</label>
@@ -972,7 +980,7 @@ const CFG_KEY = 'grosselan_config_v1';
 
 let tickets = [];
 let config = {
-  webhookCreate: '', webhookUpdate: '', webhookGet: '',
+  webhookCreate: '', webhookUpdate: '', webhookGet: '', webhookDelete: '',
   username: 'Gerard LM', initials: 'GL',
   team: [{ name: 'Gerard LM', initials: 'GL' }, { name: 'Robert B', initials: 'RB' }, { name: 'Ana M', initials: 'AM' }],
   projects: ['RÜB Fischweier', 'Ettlingen Nord', 'Karlsruhe Mitte', 'AV Albtal BA2']
@@ -1027,6 +1035,7 @@ function openSettings() {
   document.getElementById('s-webhook-create').value = config.webhookCreate || '';
   document.getElementById('s-webhook-update').value = config.webhookUpdate || '';
   document.getElementById('s-webhook-get').value = config.webhookGet || '';
+  document.getElementById('s-webhook-delete').value = config.webhookDelete || '';
   document.getElementById('s-username').value = config.username || '';
   document.getElementById('s-initials').value = config.initials || '';
   document.getElementById('s-team').value = config.team.map(t => t.name + ',' + t.initials).join('\n');
@@ -1038,6 +1047,7 @@ function saveSettings() {
   config.webhookCreate = document.getElementById('s-webhook-create').value.trim();
   config.webhookUpdate = document.getElementById('s-webhook-update').value.trim();
   config.webhookGet = document.getElementById('s-webhook-get').value.trim();
+  config.webhookDelete = document.getElementById('s-webhook-delete').value.trim();
   config.username = document.getElementById('s-username').value.trim() || 'Gerard LM';
   config.initials = document.getElementById('s-initials').value.trim().toUpperCase() || 'GL';
   const teamRaw = document.getElementById('s-team').value.trim().split('\n').filter(Boolean);
@@ -1279,6 +1289,35 @@ function quickStatus(id, status) {
       body: JSON.stringify(t)
     }).catch(() => {});
   }
+}
+
+
+async function deleteCurrentTicket() {
+  const t = tickets.find(x => x.id === viewingId);
+  if (!t) return;
+  if (!confirm(`Delete ticket ${t.id} "${t.title}"?\nThis cannot be undone.`)) return;
+  const btn = document.getElementById('delete-ticket-btn');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '<span class="loading-spinner"></span>';
+  btn.disabled = true;
+  if (config.webhookDelete && t.notionId) {
+    try {
+      await fetch(config.webhookDelete, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notionId: t.notionId })
+      });
+    } catch(e) { console.warn('N8N delete failed:', e); }
+  }
+  tickets = tickets.filter(x => x.id !== viewingId);
+  save();
+  closeModal('detail-modal');
+  renderBoard();
+  updateMetrics();
+  refreshFilters();
+  showToast(t.id + ' deleted');
+  btn.innerHTML = orig;
+  btn.disabled = false;
 }
 
 function getInitials(name) {
