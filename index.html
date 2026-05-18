@@ -715,8 +715,8 @@
     </svg>
     Alerts
   </div>
-  <div class="sidebar-section">Settings</div>
-  <div class="nav-item" onclick="openSettings()">
+  <div class="sidebar-section" id="settings-section" style="display:none">Settings</div>
+  <div class="nav-item" id="settings-nav" onclick="openSettings()" style="display:none">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
       <circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M3 13l1.5-1.5M11.5 4.5L13 3"/>
     </svg>
@@ -985,7 +985,7 @@ const CFG_KEY = 'grosselan_config_v1';
 let tickets = [];
 let config = {
   webhookCreate: '', webhookUpdate: '', webhookGet: '', webhookDelete: '', webhookNotify: '',
-  username: 'Gerard La Mata', initials: 'GL', role: 'Project Manager',
+  username: 'Gerard La Mata', initials: 'GL', role: 'Project Manager', isAdmin: true,
   team: [
     { name: 'Gerard La Mata', initials: 'GL', role: 'Project Manager' },
     { name: 'Martin Wellner', initials: 'MW', role: 'Project Manager' },
@@ -1093,6 +1093,11 @@ function updateUserDisplay() {
   document.getElementById('user-avatar').textContent = config.initials;
   const roleEl = document.getElementById('user-role');
   if (roleEl) roleEl.textContent = config.role || 'Team Member';
+  const show = config.isAdmin ? 'flex' : 'none';
+  const settingsNav = document.getElementById('settings-nav');
+  const settingsSection = document.getElementById('settings-section');
+  if (settingsNav) settingsNav.style.display = show;
+  if (settingsSection) settingsSection.style.display = show;
 }
 
 function updateN8nStatus() {
@@ -1632,6 +1637,7 @@ load();
       config.username = match.name;
       config.initials = match.initials;
       config.role = match.role || 'Team Member';
+      config.isAdmin = match.initials === 'GL';
     }
   }
 })();
