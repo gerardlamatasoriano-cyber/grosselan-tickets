@@ -1608,6 +1608,42 @@ updateN8nStatus();
 refreshFilters();
 renderBoard();
 updateMetrics();
+
+// Auto-sync from Notion on load and every 5 minutes
+async function autoSync() {
+  if (!config.webhookGet) return;
+  try {
+    const res = await fetch(config.webhookGet, { method: 'GET' });
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : (data.tickets || data.results || []);
+    if (items.length) {
+      tickets = items.map(t => ({
+        id: t.id || '',
+        title: t.title || t.Title || '',
+        description: t.description || t.Description || '',
+        project: t.project || t.Project || '',
+        assigned: Array.isArray(t.assigned) ? t.assigned : (t.assigned || t.Assigned ? (t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : []),
+        priority: t.priority || t.Priority || 'Medium',
+        status: t.status || t.Status || 'Pending',
+        deadline: t.deadline || t.Deadline || '',
+        notionId: t.notionId || t.notion_id || '',
+        createdAt: t.createdAt || new Date().toISOString()
+      }));
+      save();
+      renderBoard();
+      updateMetrics();
+      refreshFilters();
+      const now = new Date();
+      document.getElementById('sync-text').textContent = `Synced from Notion · ${items.length} tickets · ${now.toLocaleTimeString()}`;
+    }
+  } catch(e) { console.warn('Auto-sync failed:', e); }
+}
+
+// Sync on load, then every 5 minutes
+if (config.webhookGet) {
+  autoSync();
+  setInterval(autoSync, 5 * 60 * 1000);
+}
 </script>
 </body>
 </html>
