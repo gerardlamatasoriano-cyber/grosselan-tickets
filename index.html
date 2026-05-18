@@ -866,9 +866,9 @@
       </div>
       <div class="form-row" style="margin-bottom:0">
         <label class="form-label">Assigned to</label>
-        <select class="form-select" id="f-assigned">
-          <option value="">— select —</option>
+        <select class="form-select" id="f-assigned" multiple style="height:90px;padding:4px">
         </select>
+        <div style="font-size:10px;color:var(--text3);margin-top:3px">Ctrl+click to select multiple</div>
       </div>
     </div>
     <div class="form-row-2" style="margin-top:16px">
@@ -1109,7 +1109,7 @@ async function syncFromNotion() {
         title: t.title || t.Title || '',
         description: t.description || t.Description || '',
         project: t.project || t.Project || '',
-        assigned: t.assigned || t.Assigned || '',
+        assigned: Array.isArray(t.assigned) ? t.assigned : (t.assigned || t.Assigned ? (t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : []),
         priority: t.priority || t.Priority || 'Medium',
         status: t.status || t.Status || 'Pending',
         deadline: t.deadline || t.Deadline || '',
@@ -1156,7 +1156,9 @@ function editCurrentTicket() {
   document.getElementById('f-title').value = t.title;
   document.getElementById('f-description').value = t.description || '';
   document.getElementById('f-project').value = t.project || '';
-  document.getElementById('f-assigned').value = t.assigned || '';
+  const fa = document.getElementById('f-assigned');
+  const assignedArr = Array.isArray(t.assigned) ? t.assigned : (t.assigned ? [t.assigned] : []);
+  Array.from(fa.options).forEach(o => o.selected = assignedArr.includes(o.value));
   document.getElementById('f-priority').value = t.priority || 'Medium';
   document.getElementById('f-status').value = t.status || 'Pending';
   document.getElementById('f-deadline').value = t.deadline || '';
@@ -1168,7 +1170,7 @@ function populateFormSelects() {
   fp.innerHTML = '<option value="">— select —</option>';
   config.projects.forEach(p => fp.innerHTML += `<option value="${p}">${p}</option>`);
   const fa = document.getElementById('f-assigned');
-  fa.innerHTML = '<option value="">— select —</option>';
+  fa.innerHTML = '';
   config.team.forEach(m => fa.innerHTML += `<option value="${m.name}">${m.name}</option>`);
 }
 
@@ -1184,7 +1186,7 @@ async function saveTicket() {
     title,
     description: document.getElementById('f-description').value.trim(),
     project: document.getElementById('f-project').value,
-    assigned: document.getElementById('f-assigned').value,
+    assigned: Array.from(document.getElementById('f-assigned').selectedOptions).map(o => o.value).filter(Boolean),
     priority: document.getElementById('f-priority').value,
     status: document.getElementById('f-status').value,
     deadline: document.getElementById('f-deadline').value,
@@ -1259,9 +1261,11 @@ function openTicketDetail(id) {
     ${t.description ? `<div class="detail-description">${escHtml(t.description)}</div>` : ''}
     <div class="detail-field"><span class="detail-key">Project</span><span class="detail-val">${t.project || '—'}</span></div>
     <div class="detail-field"><span class="detail-key">Assigned</span>
-      <span class="detail-val" style="display:flex;align-items:center;gap:8px">
-        ${t.assigned ? `<span class="assignee-chip" style="background:var(--blue-bg);color:var(--blue);border-color:var(--blue-border)">${assigneeInitials}</span>` : ''}
-        ${t.assigned || '—'}
+      <span class="detail-val" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        ${(Array.isArray(t.assigned) ? t.assigned : (t.assigned ? [t.assigned] : [])).map(name => {
+          const ac = getAvatarColor(name);
+          return `<span class="assignee-chip" style="background:${ac.bg};color:${ac.fg};border-color:${ac.border}">${getInitials(name)}</span> ${escHtml(name)}`;
+        }).join('<span style="color:var(--text3);margin:0 4px">·</span>') || '—'}
       </span>
     </div>
     <div class="detail-field"><span class="detail-key">Created</span><span class="detail-val">${t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-GB') : '—'}</span></div>
@@ -1366,7 +1370,8 @@ function filteredTickets() {
   return tickets.filter(t => {
     const projOk = activeProject === 'all' || t.project === activeProject;
     const asgn = document.getElementById('assignee-filter').value;
-    const asgnOk = asgn === 'all' || t.assigned === asgn;
+    const tAssigned = Array.isArray(t.assigned) ? t.assigned : (t.assigned ? [t.assigned] : []);
+    const asgnOk = asgn === 'all' || tAssigned.includes(asgn);
     const prio = document.getElementById('priority-filter').value;
     const prioOk = prio === 'all' || t.priority === prio;
     return projOk && asgnOk && prioOk;
@@ -1403,8 +1408,7 @@ function renderBoard() {
     colTickets.forEach(t => {
       const card = document.createElement('div');
       card.className = 'ticket';
-      const initials = getInitials(t.assigned);
-      const ac = t.assigned ? getAvatarColor(t.assigned) : null;
+      const assignedArr = Array.isArray(t.assigned) ? t.assigned : (t.assigned ? [t.assigned] : []);
       const urgent = isUrgent(t.deadline);
       card.innerHTML = `
         <div class="ticket-meta">
@@ -1421,7 +1425,10 @@ function renderBoard() {
             <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><path d="M6 3v3l2 1"/></svg>
             ${urgent ? 'Today' : t.deadline}
           </span>` : ''}
-          ${t.assigned && ac ? `<span class="assignee-chip" style="background:${ac.bg};color:${ac.fg};border-color:${ac.border};margin-left:auto">${initials}</span>` : ''}
+          <span style="margin-left:auto;display:flex;gap:3px">${assignedArr.map(name => {
+            const ini = getInitials(name); const ac2 = getAvatarColor(name);
+            return `<span class="assignee-chip" style="background:${ac2.bg};color:${ac2.fg};border-color:${ac2.border}">${ini}</span>`;
+          }).join('')}</span>
         </div>
       `;
       card.onclick = () => openTicketDetail(t.id);
@@ -1442,7 +1449,7 @@ function renderTable() {
       <td style="font-family:'IBM Plex Mono',monospace;color:var(--text3)">${t.id}</td>
       <td style="color:var(--text)">${escHtml(t.title)}</td>
       <td>${escHtml(t.project || '—')}</td>
-      <td>${escHtml(t.assigned || '—')}</td>
+      <td>${Array.isArray(t.assigned) ? t.assigned.join(', ') : (t.assigned || '—')}</td>
       <td><span class="priority-badge ${getPriorityClass(t.priority)}" style="display:inline-flex"><span class="dot" style="background:currentColor;margin-right:4px"></span>${t.priority}</span></td>
       <td><span class="status-pill ${getStatusClass(t.status)}">${t.status}</span></td>
       <td style="${isUrgent(t.deadline) ? 'color:var(--red)' : ''}">${t.deadline || '—'}</td>
