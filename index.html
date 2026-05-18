@@ -725,8 +725,8 @@
   <div class="sidebar-bottom">
     <div class="avatar" id="user-avatar">GL</div>
     <div>
-      <div class="avatar-name" id="user-name">Gerard LM</div>
-      <div class="avatar-role">Project Lead</div>
+      <div class="avatar-name" id="user-name">Gerard La Mata</div>
+      <div class="avatar-role" id="user-role">Project Manager</div>
     </div>
   </div>
 </aside>
@@ -962,8 +962,8 @@
       <input class="form-input" id="s-initials" placeholder="GL" maxlength="3" style="max-width:80px" />
     </div>
     <div class="form-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
-      <label class="form-label">Team members (one per line: Name,Initials)</label>
-      <textarea class="form-textarea" id="s-team" placeholder="Gerard LM,GL&#10;Robert B,RB&#10;Ana M,AM"></textarea>
+      <label class="form-label">Team members (one per line: Name,Initials,Role)</label>
+      <textarea class="form-textarea" id="s-team" placeholder="Gerard La Mata,GL,Project Manager&#10;Martin Wellner,MW,Project Manager"></textarea>
     </div>
     <div class="form-row">
       <label class="form-label">Projects (one per line)</label>
@@ -985,8 +985,24 @@ const CFG_KEY = 'grosselan_config_v1';
 let tickets = [];
 let config = {
   webhookCreate: '', webhookUpdate: '', webhookGet: '', webhookDelete: '', webhookNotify: '',
-  username: 'Gerard LM', initials: 'GL',
-  team: [{ name: 'Gerard LM', initials: 'GL' }, { name: 'Robert B', initials: 'RB' }, { name: 'Ana M', initials: 'AM' }],
+  username: 'Gerard La Mata', initials: 'GL', role: 'Project Manager',
+  team: [
+    { name: 'Gerard La Mata', initials: 'GL', role: 'Project Manager' },
+    { name: 'Martin Wellner', initials: 'MW', role: 'Project Manager' },
+    { name: 'Franz Benning', initials: 'FB', role: 'Managing Director' },
+    { name: 'Marc Kemmer', initials: 'MK', role: 'Executive Assistant' },
+    { name: 'Razvan Chiaga', initials: 'RC', role: 'CAD Flow Chief' },
+    { name: 'Silviu Oprin', initials: 'SO', role: 'Automation Technician' },
+    { name: 'Robert Nica', initials: 'RN', role: 'Automation Technician' },
+    { name: 'Tobias Hoppe', initials: 'TH', role: 'CAD Technician' },
+    { name: 'Dan Chitu', initials: 'DC', role: 'Field Technician' },
+    { name: 'Mihai Andrei', initials: 'MA', role: 'Field Technician' },
+    { name: 'Ryszard Pawlik', initials: 'RP', role: 'Field Technician' },
+    { name: 'Luftrim Musay', initials: 'LM', role: 'Field Technician' },
+    { name: 'Florentina Andrei', initials: 'FA', role: 'Warehouse & Facility' },
+    { name: 'Heide Kühfuß', initials: 'HK', role: 'Office & Warehouse' },
+    { name: 'Maren Hohnhorst', initials: 'MH', role: 'External Accounting' },
+  ],
   projects: ['RÜB Fischweier', 'Ettlingen Nord', 'Karlsruhe Mitte', 'AV Albtal BA2']
 };
 
@@ -1043,7 +1059,7 @@ function openSettings() {
   document.getElementById('s-webhook-notify').value = config.webhookNotify || '';
   document.getElementById('s-username').value = config.username || '';
   document.getElementById('s-initials').value = config.initials || '';
-  document.getElementById('s-team').value = config.team.map(t => t.name + ',' + t.initials).join('\n');
+  document.getElementById('s-team').value = config.team.map(t => t.name + ',' + t.initials + ',' + (t.role || 'Team Member')).join('\n');
   document.getElementById('s-projects').value = config.projects.join('\n');
   openModal('settings-modal');
 }
@@ -1059,7 +1075,7 @@ function saveSettings() {
   const teamRaw = document.getElementById('s-team').value.trim().split('\n').filter(Boolean);
   config.team = teamRaw.map(line => {
     const parts = line.split(',');
-    return { name: parts[0].trim(), initials: (parts[1] || '??').trim().toUpperCase() };
+    return { name: parts[0].trim(), initials: (parts[1] || '??').trim().toUpperCase(), role: (parts[2] || 'Team Member').trim() };
   });
   const projRaw = document.getElementById('s-projects').value.trim().split('\n').filter(Boolean);
   config.projects = projRaw.map(p => p.trim()).filter(Boolean);
@@ -1075,6 +1091,8 @@ function saveSettings() {
 function updateUserDisplay() {
   document.getElementById('user-name').textContent = config.username;
   document.getElementById('user-avatar').textContent = config.initials;
+  const roleEl = document.getElementById('user-role');
+  if (roleEl) roleEl.textContent = config.role || 'Team Member';
 }
 
 function updateN8nStatus() {
@@ -1613,11 +1631,7 @@ load();
     if (match) {
       config.username = match.name;
       config.initials = match.initials;
-      // Also set default assignee filter to this user
-      document.addEventListener('DOMContentLoaded', () => {
-        const af = document.getElementById('assignee-filter');
-        if (af) af.value = match.name;
-      });
+      config.role = match.role || 'Team Member';
     }
   }
 })();
