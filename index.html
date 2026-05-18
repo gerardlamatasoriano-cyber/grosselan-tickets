@@ -1603,11 +1603,46 @@ function checkDeadlineWarnings() {
 }
 
 load();
+
+// Load user from URL param: ?user=GL
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const userParam = params.get('user');
+  if (userParam) {
+    const match = config.team.find(m => m.initials.toUpperCase() === userParam.toUpperCase());
+    if (match) {
+      config.username = match.name;
+      config.initials = match.initials;
+      // Also set default assignee filter to this user
+      document.addEventListener('DOMContentLoaded', () => {
+        const af = document.getElementById('assignee-filter');
+        if (af) af.value = match.name;
+      });
+    }
+  }
+})();
+
 updateUserDisplay();
 updateN8nStatus();
 refreshFilters();
 renderBoard();
 updateMetrics();
+
+// Apply URL user param to assignee filter after DOM is ready
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const userParam = params.get('user');
+  if (userParam) {
+    const match = config.team.find(m => m.initials.toUpperCase() === userParam.toUpperCase());
+    if (match) {
+      const af = document.getElementById('assignee-filter');
+      if (af) {
+        af.value = match.name;
+        applyFilters();
+      }
+    }
+  }
+})();
 
 // Auto-sync from Notion on load and every 5 minutes
 async function autoSync() {
