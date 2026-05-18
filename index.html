@@ -1329,12 +1329,25 @@ function openTicketDetail(id) {
     notionHtml +
     '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' + statusBtns + '</div>';
 
+  // Show/hide edit and delete buttons based on assignment
+  const isAssigned = assignedArr.includes(config.username);
+  const canEdit = config.isAdmin || isAssigned;
+  const editBtn = document.getElementById('edit-ticket-btn');
+  const deleteBtn = document.getElementById('delete-ticket-btn');
+  if (editBtn) editBtn.style.display = canEdit ? 'inline-flex' : 'none';
+  if (deleteBtn) deleteBtn.style.display = canEdit ? 'inline-flex' : 'none';
+
   openModal('detail-modal');
 }
 
 function quickStatus(id, status) {
   const t = tickets.find(x => x.id === id);
   if (!t) return;
+  const assignedArr = Array.isArray(t.assigned) ? t.assigned : (t.assigned ? [t.assigned] : []);
+  if (!config.isAdmin && !assignedArr.includes(config.username)) {
+    showToast('You are not assigned to this ticket', true);
+    return;
+  }
   t.status = status;
   save();
   renderBoard();
