@@ -1244,36 +1244,46 @@ function openTicketDetail(id) {
   if (!t) return;
   viewingId = id;
   document.getElementById('detail-modal-title').textContent = '// ' + t.id;
-  const assigneeInitials = getInitials(t.assigned);
   const priorityClass = getPriorityClass(t.priority);
   const statusClass = getStatusClass(t.status);
-  document.getElementById('detail-content').innerHTML = `
-    <div style="margin-bottom:12px">
-      <h2 style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;margin-bottom:8px">${escHtml(t.title)}</h2>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-        <span class="priority-badge ${priorityClass}"><span class="dot" style="background:currentColor"></span>${t.priority}</span>
-        <span class="status-pill ${statusClass}">${t.status}</span>
-        ${t.deadline ? `<span class="deadline-chip ${isUrgent(t.deadline) ? 'urgent' : ''}">
-          <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><path d="M6 3v3l2 1"/></svg>
-          ${t.deadline}</span>` : ''}
-      </div>
-    </div>
-    ${t.description ? `<div class="detail-description">${escHtml(t.description)}</div>` : ''}
-    <div class="detail-field"><span class="detail-key">Project</span><span class="detail-val">${t.project || '—'}</span></div>
-    <div class="detail-field"><span class="detail-key">Assigned</span>
-      <span class="detail-val" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        ${(Array.isArray(t.assigned) ? t.assigned : (t.assigned ? [t.assigned] : [])).map(name => {
-          const ac = getAvatarColor(name);
-          return `<span class="assignee-chip" style="background:${ac.bg};color:${ac.fg};border-color:${ac.border}">${getInitials(name)}</span> ${escHtml(name)}`;
-        }).join('<span style="color:var(--text3);margin:0 4px">·</span>') || '—'}
-      </span>
-    </div>
-    <div class="detail-field"><span class="detail-key">Created</span><span class="detail-val">${t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-GB') : '—'}</span></div>
-    ${t.notionId ? `<div class="detail-field"><span class="detail-key">Notion ID</span><span class="detail-val" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3)">${t.notionId}</span></div>` : ''}
-    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
-      ${STATUSES.map(s => `<button class="btn ${t.status === s ? 'btn-primary' : ''}" style="${t.status===s?'':'font-size:11px'}" onclick="quickStatus('${id}','${s}')">${s}</button>`).join('')}
-    </div>
-  `;
+  const urgent = isUrgent(t.deadline);
+  const assignedArr = Array.isArray(t.assigned) ? t.assigned : (t.assigned ? [t.assigned] : []);
+
+  const deadlineHtml = t.deadline
+    ? '<span class="deadline-chip ' + (urgent ? 'urgent' : '') + '"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4.5"/><path d="M6 3v3l2 1"/></svg>' + t.deadline + '</span>'
+    : '';
+  const descHtml = t.description
+    ? '<div class="detail-description">' + escHtml(t.description) + '</div>'
+    : '';
+  const assignedHtml = assignedArr.length
+    ? assignedArr.map(name => {
+        const ac = getAvatarColor(name);
+        return '<span class="assignee-chip" style="background:' + ac.bg + ';color:' + ac.fg + ';border-color:' + ac.border + '">' + getInitials(name) + '</span> ' + escHtml(name);
+      }).join('<span style="color:var(--text3);margin:0 4px">·</span>')
+    : '—';
+  const notionHtml = t.notionId
+    ? '<div class="detail-field"><span class="detail-key">Notion ID</span><span class="detail-val" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3)">' + t.notionId + '</span></div>'
+    : '';
+  const statusBtns = STATUSES.map(s =>
+    '<button class="btn ' + (t.status === s ? 'btn-primary' : '') + '" onclick="quickStatus('' + id + '','' + s + '')">' + s + '</button>'
+  ).join('');
+
+  document.getElementById('detail-content').innerHTML =
+    '<div style="margin-bottom:12px">' +
+      '<h2 style="font-size:16px;font-weight:500;color:var(--text);line-height:1.4;margin-bottom:8px">' + escHtml(t.title) + '</h2>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+        '<span class="priority-badge ' + priorityClass + '"><span class="dot" style="background:currentColor"></span>' + t.priority + '</span>' +
+        '<span class="status-pill ' + statusClass + '">' + t.status + '</span>' +
+        deadlineHtml +
+      '</div>' +
+    '</div>' +
+    descHtml +
+    '<div class="detail-field"><span class="detail-key">Project</span><span class="detail-val">' + (t.project || '—') + '</span></div>' +
+    '<div class="detail-field"><span class="detail-key">Assigned</span><span class="detail-val" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + assignedHtml + '</span></div>' +
+    '<div class="detail-field"><span class="detail-key">Created</span><span class="detail-val">' + (t.createdAt ? new Date(t.createdAt).toLocaleDateString("en-GB") : '—') + '</span></div>' +
+    notionHtml +
+    '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' + statusBtns + '</div>';
+
   openModal('detail-modal');
 }
 
