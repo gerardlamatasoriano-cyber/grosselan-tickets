@@ -788,7 +788,9 @@
   <!-- FILTERS + VIEW TOGGLE -->
   <div class="filters" id="filter-bar">
     <span class="filter-label">Project:</span>
-    <div id="project-filters"></div>
+    <select class="filter-select" id="project-filter" onchange="setProject(this.value)" style="min-width:160px">
+      <option value="all">All projects</option>
+    </select>
     <div class="filter-sep"></div>
     <span class="filter-label">Assigned:</span>
     <select class="filter-select" id="assignee-filter" onchange="applyFilters()">
@@ -1431,13 +1433,14 @@ function updateMetrics() {
 }
 
 function refreshFilters() {
-  const pf = document.getElementById('project-filters');
-  pf.innerHTML = `<span class="filter-chip ${activeProject === 'all' ? 'active' : ''}" onclick="setProject('all')">All</span>`;
+  const pf = document.getElementById('project-filter');
   const activeProjects = [...new Set(tickets.map(t => t.project).filter(Boolean))];
   const allProjects = [...new Set([...config.projects, ...activeProjects])];
+  pf.innerHTML = '<option value="all">All projects</option>';
   allProjects.forEach(p => {
-    pf.innerHTML += `<span class="filter-chip ${activeProject === p ? 'active' : ''}" onclick="setProject('${p.replace(/'/g, "\\'")}')">${escHtml(p)}</span>`;
+    pf.innerHTML += `<option value="${escHtml(p)}" ${activeProject === p ? 'selected' : ''}>${escHtml(p)}</option>`;
   });
+  pf.value = activeProject;
 
   const af = document.getElementById('assignee-filter');
   const curr = af.value;
