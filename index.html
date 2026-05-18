@@ -949,6 +949,10 @@
       <label class="form-label">N8N Webhook URL (delete ticket)</label>
       <input class="form-input" id="s-webhook-delete" placeholder="https://your-n8n.com/webhook/tickets-delete" />
     </div>
+    <div class="form-row">
+      <label class="form-label">N8N Webhook URL (notifications)</label>
+      <input class="form-input" id="s-webhook-notify" placeholder="https://your-n8n.com/webhook/tickets-notify" />
+    </div>
     <div class="form-row" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px">
       <label class="form-label">Your name (shown in sidebar)</label>
       <input class="form-input" id="s-username" placeholder="Your name" />
@@ -980,7 +984,7 @@ const CFG_KEY = 'grosselan_config_v1';
 
 let tickets = [];
 let config = {
-  webhookCreate: '', webhookUpdate: '', webhookGet: '', webhookDelete: '',
+  webhookCreate: '', webhookUpdate: '', webhookGet: '', webhookDelete: '', webhookNotify: '',
   username: 'Gerard LM', initials: 'GL',
   team: [{ name: 'Gerard LM', initials: 'GL' }, { name: 'Robert B', initials: 'RB' }, { name: 'Ana M', initials: 'AM' }],
   projects: ['RÜB Fischweier', 'Ettlingen Nord', 'Karlsruhe Mitte', 'AV Albtal BA2']
@@ -1036,6 +1040,7 @@ function openSettings() {
   document.getElementById('s-webhook-update').value = config.webhookUpdate || '';
   document.getElementById('s-webhook-get').value = config.webhookGet || '';
   document.getElementById('s-webhook-delete').value = config.webhookDelete || '';
+  document.getElementById('s-webhook-notify').value = config.webhookNotify || '';
   document.getElementById('s-username').value = config.username || '';
   document.getElementById('s-initials').value = config.initials || '';
   document.getElementById('s-team').value = config.team.map(t => t.name + ',' + t.initials).join('\n');
@@ -1048,6 +1053,7 @@ function saveSettings() {
   config.webhookUpdate = document.getElementById('s-webhook-update').value.trim();
   config.webhookGet = document.getElementById('s-webhook-get').value.trim();
   config.webhookDelete = document.getElementById('s-webhook-delete').value.trim();
+  config.webhookNotify = document.getElementById('s-webhook-notify').value.trim();
   config.username = document.getElementById('s-username').value.trim() || 'Gerard LM';
   config.initials = document.getElementById('s-initials').value.trim().toUpperCase() || 'GL';
   const teamRaw = document.getElementById('s-team').value.trim().split('\n').filter(Boolean);
@@ -1122,6 +1128,7 @@ async function syncFromNotion() {
       refreshFilters();
       document.getElementById('sync-text').textContent = `Synced from Notion · ${items.length} tickets · ${new Date().toLocaleTimeString()}`;
       showToast(`${items.length} tickets loaded from Notion`);
+      checkDeadlineWarnings();
     } else {
       showToast('No tickets returned from Notion', true);
     }
@@ -1174,6 +1181,18 @@ function populateFormSelects() {
   config.team.forEach(m => fa.innerHTML += `<option value="${m.name}">${m.name}</option>`);
 }
 
+
+async function sendNotification(event, ticket, changedBy) {
+  if (!config.webhookNotify) return;
+  try {
+    await fetch(config.webhookNotify, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event, ticket, changedBy: changedBy || config.username })
+    });
+  } catch(e) { console.warn('Notification failed:', e); }
+}
+
 async function saveTicket() {
   const title = document.getElementById('f-title').value.trim();
   if (!title) { showToast('Title is required', true); return; }
@@ -1196,6 +1215,7 @@ async function saveTicket() {
     const idx = tickets.findIndex(t => t.id === editingId);
     if (idx !== -1) {
       tickets[idx] = { ...tickets[idx], ...payload };
+      sendNotification('status_changed', tickets[idx], config.username);
       if (config.webhookUpdate) {
         try {
           await fetch(config.webhookUpdate, {
@@ -1210,6 +1230,7 @@ async function saveTicket() {
   } else {
     const newTicket = { id: nextId(), ...payload, createdAt: new Date().toISOString() };
     tickets.push(newTicket);
+    sendNotification('created', newTicket, config.username);
     if (config.webhookCreate) {
       try {
         const res = await fetch(config.webhookCreate, {
@@ -1297,6 +1318,7 @@ function quickStatus(id, status) {
   updateMetrics();
   openTicketDetail(id);
   showToast(id + ' → ' + status);
+  sendNotification('status_changed', t, config.username);
   if (config.webhookUpdate) {
     fetch(config.webhookUpdate, {
       method: 'POST',
@@ -1324,6 +1346,7 @@ async function deleteCurrentTicket() {
       });
     } catch(e) { console.warn('N8N delete failed:', e); }
   }
+  sendNotification('deleted', t, config.username);
   tickets = tickets.filter(x => x.id !== viewingId);
   save();
   closeModal('detail-modal');
@@ -1564,6 +1587,20 @@ document.addEventListener('keydown', e => {
     openNewTicket();
   }
 });
+
+
+function checkDeadlineWarnings() {
+  if (!config.webhookNotify) return;
+  const now = new Date();
+  const in48h = new Date(now.getTime() + 48 * 3600000);
+  tickets.forEach(t => {
+    if (!t.deadline || t.status === 'Done' || t.status === 'Delivered') return;
+    const d = new Date(t.deadline);
+    if (d >= now && d <= in48h) {
+      sendNotification('deadline_warning', t, config.username);
+    }
+  });
+}
 
 load();
 updateUserDisplay();
