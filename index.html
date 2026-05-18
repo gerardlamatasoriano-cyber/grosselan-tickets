@@ -1644,6 +1644,8 @@ load();
 (function() {
   const params = new URLSearchParams(window.location.search);
   const userParam = params.get('user');
+  // Always reset isAdmin to false first — recalculate from URL
+  config.isAdmin = false;
   if (userParam) {
     const match = config.team.find(m => m.initials.toUpperCase() === userParam.toUpperCase());
     if (match) {
@@ -1652,6 +1654,9 @@ load();
       config.role = match.role || 'Team Member';
       config.isAdmin = match.initials === 'GL';
     }
+  } else {
+    // No URL param — check if stored initials are GL
+    config.isAdmin = config.initials === 'GL';
   }
 })();
 
