@@ -1125,6 +1125,8 @@ function saveSettings() {
   updateN8nStatus();
   closeModal('settings-modal');
   showToast('Settings saved');
+  // Restart auto-sync with new webhook config
+  if (config.webhookGet) startAutoSync();
 }
 
 function updateUserDisplay() {
@@ -1170,20 +1172,9 @@ async function syncFromNotion() {
   try {
     const res = await fetch(config.webhookGet, { method: 'GET' });
     const data = await res.json();
-    const items = Array.isArray(data) ? data : (data.tickets || data.results || []);
+    const items = Array.isArray(data) ? data : (data.tickets || data.results || data.items || []);
     if (items.length) {
-      tickets = items.map(t => ({
-        id: t.id || nextId(),
-        title: t.title || t.Title || '',
-        description: t.description || t.Description || '',
-        project: t.project || t.Project || '',
-        assigned: Array.isArray(t.assigned) ? t.assigned : (t.assigned || t.Assigned ? (t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : []),
-        priority: t.priority || t.Priority || 'Medium',
-        status: t.status || t.Status || 'Pending',
-        deadline: t.deadline || t.Deadline || '',
-        notionId: t.notionId || t.notion_id || t.id || '',
-        createdAt: t.createdAt || new Date().toISOString()
-      }));
+      tickets = items.map(mapTicket);
       save();
       renderBoard();
       updateMetrics();
@@ -1277,17 +1268,35 @@ async function saveTicket() {
     const idx = tickets.findIndex(t => t.id === editingId);
     if (idx !== -1) {
       tickets[idx] = { ...tickets[idx], ...payload };
-      sendNotification('status_changed', tickets[idx], config.username);
+      const updated = tickets[idx];
+      sendNotification('ticket_updated', updated, config.username);
       if (config.webhookUpdate) {
         try {
           await fetch(config.webhookUpdate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...tickets[idx] })
+            body: JSON.stringify({
+              id: updated.id,
+              notionId: updated.notionId || '',
+              notion_id: updated.notionId || '',
+              title: updated.title,
+              description: updated.description,
+              project: updated.project,
+              assigned: updated.assigned,
+              priority: updated.priority,
+              status: updated.status,
+              deadline: updated.deadline,
+              changedBy: config.username
+            })
           });
-        } catch(e) { console.warn('N8N update failed:', e); }
+          showToast('Ticket updated · Synced to Notion ✓');
+        } catch(e) {
+          console.warn('N8N update failed:', e);
+          showToast('Ticket updated locally (N8N unreachable)', true);
+        }
+      } else {
+        showToast('Ticket updated (local — no N8N configured)');
       }
-      showToast('Ticket updated');
     }
   } else {
     const newTicket = { id: nextId(), ...payload, createdAt: new Date().toISOString() };
@@ -1387,19 +1396,36 @@ function quickStatus(id, status) {
     showToast('You are not assigned to this ticket', true);
     return;
   }
+  const prevStatus = t.status;
   t.status = status;
   save();
   renderBoard();
   updateMetrics();
   openTicketDetail(id);
-  showToast(id + ' → ' + status);
+  showToast(id + ' → ' + status + (config.webhookUpdate ? ' · Syncing...' : ''));
   sendNotification('status_changed', t, config.username);
   if (config.webhookUpdate) {
     fetch(config.webhookUpdate, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(t)
-    }).catch(() => {});
+      body: JSON.stringify({
+        id: t.id,
+        notionId: t.notionId || '',
+        notion_id: t.notionId || '',
+        title: t.title,
+        description: t.description,
+        project: t.project,
+        assigned: t.assigned,
+        priority: t.priority,
+        status: t.status,
+        deadline: t.deadline,
+        changedBy: config.username
+      })
+    }).then(() => {
+      showToast(id + ' → ' + status + ' · Synced ✓');
+    }).catch(() => {
+      showToast(id + ' → ' + status + ' (local only)', true);
+    });
   }
 }
 
@@ -1410,14 +1436,20 @@ async function deleteCurrentTicket() {
   if (!confirm(`Delete ticket ${t.id} "${t.title}"?\nThis cannot be undone.`)) return;
   const btn = document.getElementById('delete-ticket-btn');
   const orig = btn.innerHTML;
-  btn.innerHTML = '<span class="loading-spinner"></span>';
+  btn.innerHTML = '<span class="loading-spinner"></span> Deleting...';
   btn.disabled = true;
-  if (config.webhookDelete && t.notionId) {
+  if (config.webhookDelete) {
     try {
       await fetch(config.webhookDelete, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notionId: t.notionId })
+        body: JSON.stringify({
+          id: t.id,
+          notionId: t.notionId || '',
+          notion_id: t.notionId || '',
+          title: t.title,
+          deletedBy: config.username
+        })
       });
     } catch(e) { console.warn('N8N delete failed:', e); }
   }
@@ -1428,7 +1460,7 @@ async function deleteCurrentTicket() {
   renderBoard();
   updateMetrics();
   refreshFilters();
-  showToast(t.id + ' deleted');
+  showToast(t.id + ' deleted' + (config.webhookDelete ? ' · Removed from Notion ✓' : ''));
   btn.innerHTML = orig;
   btn.disabled = false;
 }
@@ -1969,39 +2001,69 @@ updateMetrics();
 })();
 
 // Auto-sync from Notion on load and every 5 minutes
+let autoSyncCountdown = 300;
+let autoSyncInterval = null;
+
+function mapTicket(t) {
+  return {
+    id: t.id || t.ID || '',
+    title: t.title || t.Title || t.name || t.Name || '',
+    description: t.description || t.Description || '',
+    project: t.project || t.Project || '',
+    assigned: Array.isArray(t.assigned) ? t.assigned :
+              Array.isArray(t.Assigned) ? t.Assigned :
+              (t.assigned || t.Assigned)
+                ? String(t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean)
+                : [],
+    priority: t.priority || t.Priority || 'Medium',
+    status: t.status || t.Status || 'Pending',
+    deadline: t.deadline || t.Deadline || '',
+    notionId: t.notionId || t.notion_id || t.notionID || t.pageId || t.page_id || '',
+    createdAt: t.createdAt || t.created_at || new Date().toISOString()
+  };
+}
+
 async function autoSync() {
   if (!config.webhookGet) return;
   try {
     const res = await fetch(config.webhookGet, { method: 'GET' });
     const data = await res.json();
-    const items = Array.isArray(data) ? data : (data.tickets || data.results || []);
+    const items = Array.isArray(data) ? data : (data.tickets || data.results || data.items || []);
     if (items.length) {
-      tickets = items.map(t => ({
-        id: t.id || '',
-        title: t.title || t.Title || '',
-        description: t.description || t.Description || '',
-        project: t.project || t.Project || '',
-        assigned: Array.isArray(t.assigned) ? t.assigned : (t.assigned || t.Assigned ? (t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : []),
-        priority: t.priority || t.Priority || 'Medium',
-        status: t.status || t.Status || 'Pending',
-        deadline: t.deadline || t.Deadline || '',
-        notionId: t.notionId || t.notion_id || '',
-        createdAt: t.createdAt || new Date().toISOString()
-      }));
+      tickets = items.map(mapTicket);
       save();
       renderBoard();
       updateMetrics();
       refreshFilters();
       const now = new Date();
-      document.getElementById('sync-text').textContent = `Synced from Notion · ${items.length} tickets · ${now.toLocaleTimeString()}`;
+      document.getElementById('sync-text').textContent = `Auto-synced from Notion · ${items.length} tickets · ${now.toLocaleTimeString()} · Next sync in 5:00`;
+      autoSyncCountdown = 300;
     }
   } catch(e) { console.warn('Auto-sync failed:', e); }
 }
 
-// Sync on load, then every 5 minutes
-if (config.webhookGet) {
+function startAutoSync() {
+  if (!config.webhookGet) return;
   autoSync();
-  setInterval(autoSync, 5 * 60 * 1000);
+  if (autoSyncInterval) clearInterval(autoSyncInterval);
+  autoSyncInterval = setInterval(() => {
+    autoSyncCountdown--;
+    if (autoSyncCountdown <= 0) {
+      autoSync();
+    } else {
+      const min = Math.floor(autoSyncCountdown / 60);
+      const sec = String(autoSyncCountdown % 60).padStart(2, '0');
+      const syncEl = document.getElementById('sync-text');
+      if (syncEl && syncEl.textContent.includes('Next sync in')) {
+        syncEl.textContent = syncEl.textContent.replace(/Next sync in \d+:\d+/, `Next sync in ${min}:${sec}`);
+      }
+    }
+  }, 1000);
+}
+
+// Sync on load, then every 5 min with countdown
+if (config.webhookGet) {
+  startAutoSync();
 }
 </script>
 </body>
