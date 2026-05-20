@@ -8,41 +8,37 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0b0f14;
-    --bg2: #111820;
-    --bg3: #162030;
-    --bg4: #1c2a3c;
-    --border: #1e3248;
-    --border2: #284060;
-    --text: #d8e8f4;
-    --text2: #7ea8c8;
-    --text3: #3a5878;
-    --accent: #1a90d8;
-    --accent2: #28b0f0;
-    --red: #e85050;
-    --red-bg: #180a0a;
-    --red-border: #481010;
-    --orange: #d87020;
-    --orange-bg: #180e00;
-    --orange-border: #482800;
-    --yellow: #c0a000;
-    --yellow-bg: #161000;
-    --yellow-border: #403800;
-    --green: #18c058;
-    --green-bg: #001408;
-    --green-border: #004020;
-    --blue: #1888e0;
-    --blue-bg: #001020;
-    --blue-border: #003060;
-    --purple: #7850e0;
-    --purple-bg: #0c0818;
-    --purple-border: #281848;
+    --bg: #f5f5f3;
+    --bg2: #ffffff;
+    --bg3: #f0f0ee;
+    --bg4: #e8e8e5;
+    --border: #e0e0dc;
+    --border2: #c8c8c4;
+    --text: #1a1a18;
+    --text2: #505050;
+    --text3: #a0a09a;
+    --accent: #1a6aad;
+    --accent2: #3d8fd4;
+    --red: #c0383a;
+    --red-bg: #fbe8e8;
+    --red-border: #f0b8b8;
+    --orange: #c04a00;
+    --orange-bg: #fceee3;
+    --orange-border: #f5c8a0;
+    --yellow: #7a6000;
+    --yellow-bg: #fdf3c8;
+    --yellow-border: #e8d060;
+    --green: #1a6e3a;
+    --green-bg: #dff5e8;
+    --green-border: #80d0a0;
+    --blue: #0b4fad;
+    --blue-bg: #ddeeff;
+    --blue-border: #90bff5;
+    --purple: #4a2d9e;
+    --purple-bg: #ede8ff;
+    --purple-border: #b8a0f0;
     --radius: 4px;
     --radius2: 6px;
-    --glow: 0 0 12px rgba(26,144,216,0.35);
-    --glow-red: 0 0 10px rgba(232,80,80,0.4);
-    --glow-green: 0 0 10px rgba(24,192,88,0.4);
-    --scan: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(26,144,216,0.012) 2px,rgba(26,144,216,0.012) 4px);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -53,7 +49,6 @@
     height: 100vh;
     overflow: hidden;
     font-size: 13px;
-    background-image: radial-gradient(ellipse at 15% 0%, rgba(26,144,216,0.07) 0%, transparent 55%), radial-gradient(ellipse at 85% 100%, rgba(18,100,200,0.05) 0%, transparent 55%);
   }
 
   /* SIDEBAR */
@@ -76,7 +71,6 @@
     font-weight: 500;
     color: var(--accent);
     letter-spacing: 0.05em;
-    text-shadow: var(--glow);
   }
   .sidebar-sub {
     font-size: 11px;
@@ -109,7 +103,6 @@
     background: var(--bg3);
     color: var(--accent);
     border-left-color: var(--accent);
-    text-shadow: 0 0 8px rgba(26,144,216,0.5);
   }
   .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
   .nav-badge {
@@ -159,7 +152,6 @@
     align-items: center;
     gap: 12px;
     background: var(--bg2);
-    box-shadow: 0 2px 20px rgba(0,0,0,0.5);
   }
   .topbar-title {
     font-family: 'IBM Plex Mono', monospace;
@@ -189,9 +181,8 @@
     color: var(--bg);
     border-color: var(--accent);
     font-weight: 500;
-    box-shadow: var(--glow);
   }
-  .btn-primary:hover { background: #20a0f0; border-color: #20a0f0; }
+  .btn-primary:hover { background: #2279c0; border-color: #2279c0; }
 
   /* METRICS */
   .metrics {
@@ -221,9 +212,9 @@
     line-height: 1;
     margin-bottom: 4px;
   }
-  .metric-value.alert { color: var(--red); text-shadow: var(--glow-red); }
-  .metric-value.good { color: var(--green); text-shadow: var(--glow-green); }
-  .metric-value.info { color: var(--accent); text-shadow: var(--glow); }
+  .metric-value.alert { color: var(--red); }
+  .metric-value.good { color: var(--green); }
+  .metric-value.info { color: var(--accent); }
   .metric-sub { font-size: 11px; color: var(--text3); }
 
   /* FILTERS */
@@ -295,7 +286,6 @@
     overflow-y: hidden;
     padding: 16px 24px 24px;
     background: var(--bg);
-    background-image: var(--scan);
   }
   .board {
     display: flex;
@@ -349,7 +339,7 @@
   }
   .col-body::-webkit-scrollbar { width: 4px; }
   .col-body::-webkit-scrollbar-track { background: transparent; }
-  .col-body::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; opacity: 0.5; }
+  .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
   /* TICKET CARD */
   .ticket {
@@ -360,9 +350,8 @@
     cursor: pointer;
     transition: all 0.15s;
     position: relative;
-    background-image: var(--scan);
   }
-  .ticket:hover { border-color: var(--accent); background: var(--bg3); transform: translateY(-1px); box-shadow: var(--glow), inset 0 0 20px rgba(26,144,216,0.04); }
+  .ticket:hover { border-color: var(--border2); background: var(--bg3); transform: translateY(-1px); }
   .ticket-meta {
     display: flex;
     align-items: center;
@@ -405,7 +394,7 @@
     font-weight: 500;
   }
   .priority-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
-  .p-critical { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); box-shadow: 0 0 6px rgba(232,80,80,0.25); }
+  .p-critical { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
   .p-high { background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); }
   .p-medium { background: var(--yellow-bg); color: var(--yellow); border: 1px solid var(--yellow-border); }
   .p-low { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
@@ -480,7 +469,6 @@
     max-height: 90vh;
     overflow-y: auto;
     padding: 24px;
-    box-shadow: 0 0 60px rgba(0,0,0,0.9), 0 0 60px rgba(26,144,216,0.08);
   }
   .modal-header {
     display: flex;
@@ -530,7 +518,6 @@
   .form-input:focus, .form-select:focus, .form-textarea:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(26,144,216,0.15), var(--glow);
   }
   .form-textarea { resize: vertical; min-height: 80px; }
   .form-select option { background: var(--bg3); }
@@ -582,12 +569,11 @@
     align-items: center;
     gap: 8px;
     padding: 6px 24px;
-    background: rgba(11,15,20,0.9);
+    background: var(--bg2);
     border-bottom: 1px solid var(--border);
     font-size: 11px;
     color: var(--text3);
     font-family: 'IBM Plex Mono', monospace;
-    backdrop-filter: blur(4px);
   }
   .sync-dot {
     width: 6px; height: 6px;
@@ -596,8 +582,8 @@
     animation: pulse 2s infinite;
   }
   @keyframes pulse {
-    0%, 100% { opacity: 1; box-shadow: 0 0 8px rgba(24,192,88,0.9); }
-    50% { opacity: 0.5; box-shadow: none; }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
   }
 
   /* TABLE VIEW */
@@ -678,7 +664,7 @@
     color: var(--text3);
   }
   .n8n-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--yellow); }
-  .n8n-dot.connected { background: var(--green); box-shadow: 0 0 6px rgba(24,192,88,0.9); }
+  .n8n-dot.connected { background: var(--green); }
   .n8n-dot.error { background: var(--red); }
 
   /* ── MOBILE RESPONSIVE ─────────────────────────────── */
@@ -738,7 +724,7 @@
     #settings-modal .modal { max-height: 95dvh; overflow-y: auto; }
     #view-team, #view-projects, #view-summary, #view-alerts, #view-calendar { padding: 14px 12px 80px !important; overflow-y: auto; }
     .toast { bottom: 72px; right: 12px; left: 12px; text-align: center; font-size: 12px; }
-    .mob-bottom-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: rgba(17,24,32,0.95); border-top: 1px solid var(--border); z-index: 200; padding-bottom: env(safe-area-inset-bottom); backdrop-filter: blur(16px); box-shadow: 0 -4px 24px rgba(0,0,0,0.6); }
+    .mob-bottom-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--bg2); border-top: 1px solid var(--border); z-index: 200; padding-bottom: env(safe-area-inset-bottom); }
     .mob-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: var(--text3); font-size: 10px; font-family: "IBM Plex Mono", monospace; transition: color 0.15s; -webkit-tap-highlight-color: transparent; position: relative; }
     .mob-nav-item.active { color: var(--accent); }
     .mob-nav-item svg { width: 20px; height: 20px; }
@@ -829,14 +815,8 @@
       <div class="n8n-dot" id="n8n-dot"></div>
       <span id="n8n-status-text">N8N disconnected</span>
     </div>
-    <button class="btn" onclick="syncFromNotion()">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>
-      Sync Notion
-    </button>
-    <button class="btn" id="mob-sync-btn" onclick="syncFromNotion()">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>
-      Sync
-    </button>
+    <button class="btn" onclick="syncFromNotion()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>Sync Notion</button>
+    <button class="btn" id="mob-sync-btn" onclick="syncFromNotion()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>Sync</button>
     <button class="btn" onclick="exportCSV()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h10M8 2v8M5 7l3 3 3-3"/></svg>
       Export
@@ -1243,7 +1223,6 @@ function saveSettings() {
   updateN8nStatus();
   closeModal('settings-modal');
   showToast('Settings saved');
-  if (config.webhookGet) startAutoSync();
 }
 
 function updateUserDisplay() {
@@ -1396,18 +1375,17 @@ async function saveTicket() {
     const idx = tickets.findIndex(t => t.id === editingId);
     if (idx !== -1) {
       tickets[idx] = { ...tickets[idx], ...payload };
-      const updated = tickets[idx];
-      sendNotification('ticket_updated', updated, config.username);
+      sendNotification('status_changed', tickets[idx], config.username);
       if (config.webhookUpdate) {
         try {
           await fetch(config.webhookUpdate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: updated.id, notionId: updated.notionId || '', notion_id: updated.notionId || '', title: updated.title, description: updated.description, project: updated.project, assigned: updated.assigned, priority: updated.priority, status: updated.status, deadline: updated.deadline, changedBy: config.username })
+            body: JSON.stringify({ ...tickets[idx] })
           });
-          showToast('Ticket updated · Synced to Notion ✓');
-        } catch(e) { showToast('Ticket updated locally (N8N unreachable)', true); }
-      } else { showToast('Ticket updated (local)'); }
+        } catch(e) { console.warn('N8N update failed:', e); }
+      }
+      showToast('Ticket updated');
     }
   } else {
     const newTicket = { id: nextId(), ...payload, createdAt: new Date().toISOString() };
@@ -1518,8 +1496,8 @@ function quickStatus(id, status) {
     fetch(config.webhookUpdate, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: t.id, notionId: t.notionId || '', notion_id: t.notionId || '', title: t.title, description: t.description, project: t.project, assigned: t.assigned, priority: t.priority, status: t.status, deadline: t.deadline, changedBy: config.username })
-    }).then(() => showToast(id + ' → ' + status + ' · Synced ✓')).catch(() => showToast(id + ' → ' + status + ' (local only)', true));
+      body: JSON.stringify(t)
+    }).catch(() => {});
   }
 }
 
@@ -1532,12 +1510,12 @@ async function deleteCurrentTicket() {
   const orig = btn.innerHTML;
   btn.innerHTML = '<span class="loading-spinner"></span>';
   btn.disabled = true;
-  if (config.webhookDelete) {
+  if (config.webhookDelete && t.notionId) {
     try {
       await fetch(config.webhookDelete, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: t.id, notionId: t.notionId || '', notion_id: t.notionId || '', title: t.title, deletedBy: config.username })
+        body: JSON.stringify({ notionId: t.notionId })
       });
     } catch(e) { console.warn('N8N delete failed:', e); }
   }
@@ -1698,7 +1676,7 @@ function updateMetrics() {
   document.getElementById('m-delivered-sub').textContent = delivered.length > 0 ? '↑ vs last month' : '0 this month';
   document.getElementById('m-projects').textContent = projects.length;
   document.getElementById('m-proj-sub').textContent = projects.length > 0 ? `${[...new Set(projects)].length} location(s)` : 'No active projects';
-  if (typeof updateMobBadge === 'function') updateMobBadge(active.length);
+  updateMobBadge(active.length);
 }
 
 function refreshFilters() {
@@ -1916,7 +1894,7 @@ function renderSummary() {
         '<span style="font-size:12px;font-family:monospace;color:var(--text)">' + value + '</span>' +
       '</div>' +
       '<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">' +
-        '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:3px;transition:width 0.3s;box-shadow:0 0 8px ' + color + '"></div>' +
+        '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:3px;transition:width 0.3s"></div>' +
       '</div></div>';
   }
 
