@@ -1891,40 +1891,82 @@ function renderSummary() {
     if (t.project) byProject[t.project] = (byProject[t.project] || 0) + 1;
   });
   const total = tickets.length;
+  const blocked = byStatus['Blocked'] || 0;
+  const done = (byStatus['Done'] || 0) + (byStatus['Delivered'] || 0);
+  const critical = byPriority['Critical'] || 0;
+  const inProgress = byStatus['In progress'] || 0;
 
-  function bar(label, value, max, color, bgColor, borderColor) {
+  const statusColors = {
+    Pending: '#8899aa',
+    'In progress': 'var(--blue)',
+    Blocked: 'var(--red)',
+    Done: 'var(--green)',
+    Delivered: 'var(--purple)'
+  };
+  const prioColors = {
+    Critical: 'var(--red)',
+    High: 'var(--orange)',
+    Medium: 'var(--yellow)',
+    Low: 'var(--green)'
+  };
+
+  function bigBar(label, value, max, color) {
     const pct = max > 0 ? Math.round((value / max) * 100) : 0;
-    return '<div style="margin-bottom:10px">' +
-      '<div style="display:flex;justify-content:space-between;margin-bottom:4px">' +
-        '<span style="font-size:12px;color:var(--text2)">' + label + '</span>' +
-        '<span style="font-size:12px;font-family:monospace;color:var(--text)">' + value + '</span>' +
+    return '<div style="margin-bottom:14px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">' +
+        '<span style="font-size:13px;color:var(--text2);font-family:IBM Plex Sans,sans-serif">' + label + '</span>' +
+        '<span style="font-size:20px;font-family:IBM Plex Mono,monospace;font-weight:500;color:var(--text)">' + value + '</span>' +
       '</div>' +
-      '<div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">' +
-        '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:3px;transition:width 0.3s"></div>' +
-      '</div></div>';
+      '<div style="height:10px;background:var(--bg3);border-radius:5px;overflow:hidden;position:relative">' +
+        '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:5px;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);min-width:' + (value>0?'10px':'0') + '"></div>' +
+        (pct > 15 ? '<span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:9px;font-family:IBM Plex Mono,monospace;color:rgba(255,255,255,0.8);font-weight:500">' + pct + '%</span>' : '') +
+      '</div>' +
+    '</div>';
   }
 
-  const statusColors = { Pending:'#888', 'In progress':'var(--blue)', Blocked:'var(--red)', Done:'var(--green)', Delivered:'var(--purple)' };
-  const prioColors = { Critical:'var(--red)', High:'var(--orange)', Medium:'var(--yellow)', Low:'var(--green)' };
+  function kpiCard(label, value, sub, color) {
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px 24px;display:flex;flex-direction:column;gap:4px;border-left:3px solid ' + color + '">' +
+      '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);font-family:IBM Plex Mono,monospace">' + label + '</div>' +
+      '<div style="font-size:36px;font-family:IBM Plex Mono,monospace;font-weight:500;color:' + color + ';line-height:1">' + value + '</div>' +
+      '<div style="font-size:11px;color:var(--text3)">' + sub + '</div>' +
+    '</div>';
+  }
 
-  let statusBars = Object.entries(byStatus).map(([k,v]) => bar(k, v, total, statusColors[k] || '#888')).join('');
-  let prioBars = Object.entries(byPriority).map(([k,v]) => bar(k, v, total, prioColors[k] || '#888')).join('');
+  let statusBars = Object.entries(byStatus).map(([k,v]) => bigBar(k, v, total, statusColors[k] || '#888')).join('');
+  let prioBars = Object.entries(byPriority).map(([k,v]) => bigBar(k, v, total, prioColors[k] || '#888')).join('');
   let projEntries = Object.entries(byProject).sort((a,b) => b[1]-a[1]).slice(0,8);
   let projMax = projEntries.length ? projEntries[0][1] : 1;
-  let projBars = projEntries.map(([k,v]) => bar(k, v, projMax, 'var(--accent)')).join('');
+  let projBars = projEntries.map(([k,v]) => bigBar(k, v, projMax, 'var(--accent)')).join('');
+
+  const completionPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   el.innerHTML =
-    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">' +
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">' +
-        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);font-family:monospace;margin-bottom:16px">By status</div>' +
+    // KPI row
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px">' +
+      kpiCard('Total tickets', total, 'across all projects', 'var(--accent)') +
+      kpiCard('In progress', inProgress, 'currently active', 'var(--blue)') +
+      kpiCard('Blocked', blocked, blocked > 0 ? 'require attention' : 'none blocked', blocked > 0 ? 'var(--red)' : 'var(--green)') +
+      kpiCard('Critical', critical, critical > 0 ? 'high urgency' : 'none critical', critical > 0 ? 'var(--red)' : 'var(--text3)') +
+      kpiCard('Completed', done, completionPct + '% of total', 'var(--green)') +
+    '</div>' +
+    // Charts row
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">' +
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px">' +
+        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:20px;display:flex;align-items:center;gap:8px">' +
+          '<span style="width:3px;height:14px;background:var(--blue);border-radius:2px;display:inline-block"></span>By status' +
+        '</div>' +
         statusBars +
       '</div>' +
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">' +
-        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);font-family:monospace;margin-bottom:16px">By priority</div>' +
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px">' +
+        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:20px;display:flex;align-items:center;gap:8px">' +
+          '<span style="width:3px;height:14px;background:var(--red);border-radius:2px;display:inline-block"></span>By priority' +
+        '</div>' +
         prioBars +
       '</div>' +
-      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">' +
-        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text3);font-family:monospace;margin-bottom:16px">By project</div>' +
+      '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px">' +
+        '<div style="font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:20px;display:flex;align-items:center;gap:8px">' +
+          '<span style="width:3px;height:14px;background:var(--accent);border-radius:2px;display:inline-block"></span>By project' +
+        '</div>' +
         (projBars || '<div style="color:var(--text3);font-size:12px">No data</div>') +
       '</div>' +
     '</div>';
