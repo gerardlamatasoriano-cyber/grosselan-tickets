@@ -17,8 +17,8 @@
     --text: #1a1a18;
     --text2: #505050;
     --text3: #a0a09a;
-    --accent: #1a6aad;
-    --accent2: #3d8fd4;
+    --accent: #c07800;
+    --accent2: #f0a500;
     --red: #c0383a;
     --red-bg: #fbe8e8;
     --red-border: #f0b8b8;
@@ -182,7 +182,7 @@
     border-color: var(--accent);
     font-weight: 500;
   }
-  .btn-primary:hover { background: #2279c0; border-color: #2279c0; }
+  .btn-primary:hover { background: #ffc020; border-color: #ffc020; }
 
   /* METRICS */
   .metrics {
@@ -701,7 +701,7 @@
     .column { width: 100%; min-width: unset; max-height: none; }
     .col-body { overflow-y: visible; max-height: none; }
     .col-header { cursor: pointer; padding: 10px 4px; }
-    .col-header::after { content: "\25BE"; margin-left: auto; font-size: 12px; color: var(--text3); transition: transform 0.2s; }
+    .col-header::after { content: "▾"; margin-left: auto; font-size: 12px; color: var(--text3); transition: transform 0.2s; }
     .column.collapsed .col-header::after { transform: rotate(-90deg); }
     .column.collapsed .col-body, .column.collapsed .add-ticket-btn { display: none; }
     .ticket { padding: 14px; }
@@ -710,18 +710,18 @@
     .tickets-table th:nth-child(3), .tickets-table td:nth-child(3),
     .tickets-table th:nth-child(4), .tickets-table td:nth-child(4) { display: none; }
     .modal-overlay { align-items: flex-end; padding: 0; }
-    .modal { width: 100vw; max-width: 100vw; max-height: 92dvh; overflow-y: auto; border-radius: 16px 16px 0 0; border-left: none; border-right: none; border-bottom: none; padding: 20px 16px 32px; }
+    .modal { width: 100vw; max-width: 100vw; max-height: 92dvh; border-radius: 16px 16px 0 0; border-left: none; border-right: none; border-bottom: none; padding: 20px 16px 32px; }
     .modal-header { margin-bottom: 16px; }
-    #detail-modal .modal { max-height: 95dvh; overflow-y: auto; }
     #detail-modal .modal-header > div { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     #detail-modal .modal-header .btn { padding: 6px 10px; font-size: 11px; }
     .form-row-2 { grid-template-columns: 1fr; gap: 0; }
     .form-input, .form-select, .form-textarea { font-size: 16px; padding: 10px 12px; }
     .modal-footer { flex-direction: column-reverse; gap: 8px; }
     .modal-footer .btn { width: 100%; justify-content: center; padding: 12px; font-size: 14px; }
+    #detail-modal .modal { max-height: 95dvh; }
     .detail-key { min-width: 76px; width: 76px; font-size: 10px; }
     .detail-field { padding: 8px 0; }
-    #settings-modal .modal { max-height: 95dvh; overflow-y: auto; }
+    #settings-modal .modal { max-height: 95dvh; }
     #view-team, #view-projects, #view-summary, #view-alerts, #view-calendar { padding: 14px 12px 80px !important; overflow-y: auto; }
     .toast { bottom: 72px; right: 12px; left: 12px; text-align: center; font-size: 12px; }
     .mob-bottom-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--bg2); border-top: 1px solid var(--border); z-index: 200; padding-bottom: env(safe-area-inset-bottom); }
@@ -809,14 +809,22 @@
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <button class="mob-hamburger" onclick="openSidebar()" aria-label="Menu"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4h14M2 9h14M2 14h14"/></svg></button>
+    <button class="mob-hamburger" onclick="openSidebar()" aria-label="Menu">
+      <svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 4h14M2 9h14M2 14h14"/></svg>
+    </button>
     <span class="topbar-title">// ticket_board</span>
     <div class="n8n-status">
       <div class="n8n-dot" id="n8n-dot"></div>
       <span id="n8n-status-text">N8N disconnected</span>
     </div>
-    <button class="btn" onclick="syncFromNotion()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>Sync Notion</button>
-    <button class="btn" id="mob-sync-btn" onclick="syncFromNotion()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>Sync</button>
+    <button class="btn" onclick="syncFromNotion()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>
+      Sync Notion
+    </button>
+    <button class="btn" id="mob-sync-btn" onclick="syncFromNotion()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>
+      Sync
+    </button>
     <button class="btn" onclick="exportCSV()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h10M8 2v8M5 7l3 3 3-3"/></svg>
       Export
@@ -1086,7 +1094,6 @@
     </div>
   </div>
 </div>
-
 
 <!-- MOBILE BOTTOM NAV -->
 <nav class="mob-bottom-nav" id="mob-bottom-nav">
@@ -1464,7 +1471,7 @@ function openTicketDetail(id) {
     '<div class="detail-field"><span class="detail-key">Assigned</span><span class="detail-val" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + assignedHtml + '</span></div>' +
     '<div class="detail-field"><span class="detail-key">Created</span><span class="detail-val">' + (t.createdAt ? new Date(t.createdAt).toLocaleDateString("en-GB") : '—') + '</span></div>' +
     notionHtml +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px">' + statusBtns + '</div>';
+    '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">' + statusBtns + '</div>';
 
   // Show/hide edit and delete buttons based on assignment
   const isAssigned = assignedArr.includes(config.username);
@@ -1634,7 +1641,6 @@ function renderBoard() {
       body.appendChild(card);
     });
   });
-  setTimeout(initMobileColumns, 0);
 }
 
 function renderTable() {
@@ -1676,7 +1682,6 @@ function updateMetrics() {
   document.getElementById('m-delivered-sub').textContent = delivered.length > 0 ? '↑ vs last month' : '0 this month';
   document.getElementById('m-projects').textContent = projects.length;
   document.getElementById('m-proj-sub').textContent = projects.length > 0 ? `${[...new Set(projects)].length} location(s)` : 'No active projects';
-  updateMobBadge(active.length);
 }
 
 function refreshFilters() {
@@ -1987,24 +1992,23 @@ function renderCalendar() {
       ticketsByDay[day].push(t);
     }
   });
-  const isMob = window.innerWidth <= 768;
-  const days = isMob ? ['S','M','T','W','T','F','S'] : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   let html = '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border)">';
   days.forEach(d => {
     html += '<div style="background:var(--bg2);padding:8px;text-align:center;font-size:11px;font-family:monospace;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em">' + d + '</div>';
   });
   const startDay = firstDay === 0 ? 6 : firstDay - 1;
   for (let i = 0; i < startDay; i++) {
-    html += '<div style="background:var(--bg);min-height:' + (isMob?'52px':'80px') + '"></div>';
+    html += '<div style="background:var(--bg);min-height:80px"></div>';
   }
   for (let d = 1; d <= daysInMonth; d++) {
     const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
     const dayTickets = ticketsByDay[d] || [];
-    html += '<div style="background:var(--bg2);min-height:' + (isMob?'52px':'80px') + ';padding:' + (isMob?'3px':'6px') + ';'border-top:' + (isToday ? '2px solid var(--accent)' : '1px solid transparent') + '">' +
+    html += '<div style="background:var(--bg2);min-height:80px;padding:6px;border-top:' + (isToday ? '2px solid var(--accent)' : '1px solid transparent') + '">' +
       '<div style="font-size:12px;font-family:monospace;font-weight:' + (isToday ? '600' : '400') + ';color:' + (isToday ? 'var(--accent)' : 'var(--text2)') + ';margin-bottom:4px">' + d + '</div>' +
-      dayTickets.slice(0, isMob?1:3).map(t => {
+      dayTickets.slice(0,3).map(t => {
         const pc = getPriorityClass(t.priority);
-        return '<div onclick="openTicketDetail(\'' + t.id + '\')" class="priority-badge ' + pc + '" style="display:block;margin-bottom:2px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:' + (isMob?'9px':'10px') + ';max-width:100%;padding:1px ' + (isMob?'3px':'6px') + '">' + (isMob ? t.id : escHtml(t.title)) + '</div>';
+        return '<div onclick="openTicketDetail(\'' + t.id + '\')" class="priority-badge ' + pc + '" style="display:block;margin-bottom:3px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;max-width:100%">' + escHtml(t.title) + '</div>';
       }).join('') +
       (dayTickets.length > 3 ? '<div style="font-size:10px;color:var(--text3)">+' + (dayTickets.length-3) + ' more</div>' : '') +
     '</div>';
@@ -2070,62 +2074,41 @@ updateMetrics();
   }
 })();
 
-// ── AUTO-SYNC ─────────────────────────────────────────
-let autoSyncCountdown = 300;
-let autoSyncInterval = null;
-
-function mapTicket(t) {
-  return {
-    id: t.id || t.ID || '',
-    title: t.title || t.Title || t.name || t.Name || '',
-    description: t.description || t.Description || '',
-    project: t.project || t.Project || '',
-    assigned: Array.isArray(t.assigned) ? t.assigned : Array.isArray(t.Assigned) ? t.Assigned :
-              (t.assigned || t.Assigned) ? String(t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : [],
-    priority: t.priority || t.Priority || 'Medium',
-    status: t.status || t.Status || 'Pending',
-    deadline: t.deadline || t.Deadline || '',
-    notionId: t.notionId || t.notion_id || t.notionID || t.pageId || t.page_id || '',
-    createdAt: t.createdAt || t.created_at || new Date().toISOString()
-  };
-}
-
+// Auto-sync from Notion on load and every 5 minutes
 async function autoSync() {
   if (!config.webhookGet) return;
   try {
     const res = await fetch(config.webhookGet, { method: 'GET' });
     const data = await res.json();
-    const items = Array.isArray(data) ? data : (data.tickets || data.results || data.items || []);
+    const items = Array.isArray(data) ? data : (data.tickets || data.results || []);
     if (items.length) {
-      tickets = items.map(mapTicket);
-      save(); renderBoard(); updateMetrics(); refreshFilters();
+      tickets = items.map(t => ({
+        id: t.id || '',
+        title: t.title || t.Title || '',
+        description: t.description || t.Description || '',
+        project: t.project || t.Project || '',
+        assigned: Array.isArray(t.assigned) ? t.assigned : (t.assigned || t.Assigned ? (t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : []),
+        priority: t.priority || t.Priority || 'Medium',
+        status: t.status || t.Status || 'Pending',
+        deadline: t.deadline || t.Deadline || '',
+        notionId: t.notionId || t.notion_id || '',
+        createdAt: t.createdAt || new Date().toISOString()
+      }));
+      save();
+      renderBoard();
+      updateMetrics();
+      refreshFilters();
       const now = new Date();
-      document.getElementById('sync-text').textContent = `Auto-synced from Notion · ${items.length} tickets · ${now.toLocaleTimeString()} · Next sync in 5:00`;
-      autoSyncCountdown = 300;
+      document.getElementById('sync-text').textContent = `Synced from Notion · ${items.length} tickets · ${now.toLocaleTimeString()}`;
     }
   } catch(e) { console.warn('Auto-sync failed:', e); }
 }
 
-function startAutoSync() {
-  if (!config.webhookGet) return;
+// Sync on load, then every 5 minutes
+if (config.webhookGet) {
   autoSync();
-  if (autoSyncInterval) clearInterval(autoSyncInterval);
-  autoSyncInterval = setInterval(() => {
-    autoSyncCountdown--;
-    if (autoSyncCountdown <= 0) {
-      autoSync();
-    } else {
-      const min = Math.floor(autoSyncCountdown / 60);
-      const sec = String(autoSyncCountdown % 60).padStart(2, '0');
-      const syncEl = document.getElementById('sync-text');
-      if (syncEl && syncEl.textContent.includes('Next sync in')) {
-        syncEl.textContent = syncEl.textContent.replace(/Next sync in \d+:\d+/, `Next sync in ${min}:${sec}`);
-      }
-    }
-  }, 1000);
+  setInterval(autoSync, 5 * 60 * 1000);
 }
-
-if (config.webhookGet) startAutoSync();
 
 // ── MOBILE FUNCTIONS ─────────────────────────────────
 function openSidebar() {
@@ -2184,6 +2167,63 @@ function updateMobBadge(count) {
   if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = 'flex'; }
   else { badge.style.display = 'none'; }
 }
+
+// ── AUTO-SYNC ─────────────────────────────────────────
+let autoSyncCountdown = 300;
+let autoSyncInterval = null;
+
+function mapTicket(t) {
+  return {
+    id: t.id || t.ID || '',
+    title: t.title || t.Title || t.name || t.Name || '',
+    description: t.description || t.Description || '',
+    project: t.project || t.Project || '',
+    assigned: Array.isArray(t.assigned) ? t.assigned : Array.isArray(t.Assigned) ? t.Assigned :
+              (t.assigned || t.Assigned) ? String(t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : [],
+    priority: t.priority || t.Priority || 'Medium',
+    status: t.status || t.Status || 'Pending',
+    deadline: t.deadline || t.Deadline || '',
+    notionId: t.notionId || t.notion_id || t.notionID || t.pageId || t.page_id || '',
+    createdAt: t.createdAt || t.created_at || new Date().toISOString()
+  };
+}
+
+async function autoSync() {
+  if (!config.webhookGet) return;
+  try {
+    const res = await fetch(config.webhookGet, { method: 'GET' });
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : (data.tickets || data.results || data.items || []);
+    if (items.length) {
+      tickets = items.map(mapTicket);
+      save(); renderBoard(); updateMetrics(); refreshFilters();
+      const now = new Date();
+      document.getElementById('sync-text').textContent = `Auto-synced from Notion · ${items.length} tickets · ${now.toLocaleTimeString()} · Next sync in 5:00`;
+      autoSyncCountdown = 300;
+    }
+  } catch(e) { console.warn('Auto-sync failed:', e); }
+}
+
+function startAutoSync() {
+  if (!config.webhookGet) return;
+  autoSync();
+  if (autoSyncInterval) clearInterval(autoSyncInterval);
+  autoSyncInterval = setInterval(() => {
+    autoSyncCountdown--;
+    if (autoSyncCountdown <= 0) {
+      autoSync();
+    } else {
+      const min = Math.floor(autoSyncCountdown / 60);
+      const sec = String(autoSyncCountdown % 60).padStart(2, '0');
+      const syncEl = document.getElementById('sync-text');
+      if (syncEl && syncEl.textContent.includes('Next sync in')) {
+        syncEl.textContent = syncEl.textContent.replace(/Next sync in \d+:\d+/, `Next sync in ${min}:${sec}`);
+      }
+    }
+  }, 1000);
+}
+
+if (config.webhookGet) startAutoSync();
 
 </script>
 </body>
