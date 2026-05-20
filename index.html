@@ -1877,6 +1877,68 @@ function renderProjects() {
 }
 
 // ── SUMMARY VIEW ───────────────────────────────────────
+function goToTickets(filters) {
+  // Apply filters and switch to kanban view
+  if (filters.status) {
+    // We need to show all projects but filter by status
+    // Since we don't have a status filter in the bar, we'll filter assignee to all
+    // and use a custom filtered view
+  }
+  if (filters.priority) {
+    const pf = document.getElementById('priority-filter');
+    if (pf) pf.value = filters.priority;
+  } else {
+    const pf = document.getElementById('priority-filter');
+    if (pf) pf.value = 'all';
+  }
+  if (filters.project) {
+    activeProject = filters.project;
+    refreshFilters();
+  } else {
+    activeProject = 'all';
+    refreshFilters();
+  }
+  if (filters.assignee) {
+    const af = document.getElementById('assignee-filter');
+    if (af) af.value = filters.assignee;
+  }
+  applyFilters();
+
+  // Switch to kanban view
+  ['kanban','projects','team','calendar','summary','alerts'].forEach(x => {
+    const el = document.getElementById('view-' + x);
+    if (el) el.classList.toggle('hidden', x !== 'kanban');
+  });
+  document.getElementById('view-table').classList.add('hidden');
+  document.getElementById('filter-bar').style.display = 'flex';
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => {
+    if (el.textContent.trim().startsWith('Tickets')) el.classList.add('active');
+  });
+  // Update mobile nav
+  document.querySelectorAll('.mob-nav-item').forEach(x => x.classList.remove('active'));
+  const mbnTickets = document.getElementById('mbn-tickets');
+  if (mbnTickets) mbnTickets.classList.add('active');
+  currentView = 'kanban';
+  renderBoard();
+
+  // If status filter needed, scroll to that column
+  if (filters.status) {
+    setTimeout(() => {
+      const colId = 'col-' + filters.status.replace(' ', '-');
+      const col = document.getElementById(colId);
+      if (col) col.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+  }
+
+  // Show toast
+  const parts = [];
+  if (filters.status) parts.push('Status: ' + filters.status);
+  if (filters.priority) parts.push('Priority: ' + filters.priority);
+  if (filters.project) parts.push('Project: ' + filters.project);
+  if (parts.length) showToast('Filtered: ' + parts.join(' · '));
+}
+
 function renderSummary() {
   const el = document.getElementById('summary-content');
   if (!el) return;
@@ -1907,85 +1969,103 @@ function renderSummary() {
     Critical: '#e85050', High: '#d87020', Medium: '#c0a000', Low: '#18c058'
   };
 
-  function powerBar(label, value, max, color, sublabel) {
+  function powerBar(label, value, max, color, onclick) {
     const pct = max > 0 ? Math.round((value / max) * 100) : 0;
-    return '<div style="margin-bottom:18px">' +
+    const cursor = onclick ? 'cursor:pointer' : '';
+    const hover = onclick ? 'onmouseenter="this.style.background=\'var(--bg3)\'" onmouseleave="this.style.background=\'\'"' : '';
+    return '<div style="margin-bottom:18px;padding:8px;border-radius:var(--radius);transition:background 0.15s;' + cursor + '" ' + hover + (onclick ? 'onclick="' + onclick + '"' : '') + '>' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px">' +
-        '<div>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
           '<span style="font-size:13px;color:var(--text);font-weight:500">' + label + '</span>' +
-          (sublabel ? '<span style="font-size:10px;color:var(--text3);margin-left:6px;font-family:IBM Plex Mono,monospace">' + sublabel + '</span>' : '') +
+          (onclick ? '<span style="font-size:10px;color:var(--text3);font-family:IBM Plex Mono,monospace">→ view</span>' : '') +
         '</div>' +
         '<span style="font-size:26px;font-family:IBM Plex Mono,monospace;font-weight:500;color:' + color + ';line-height:1">' + value + '</span>' +
       '</div>' +
       '<div style="height:14px;background:var(--bg3);border-radius:7px;overflow:hidden;position:relative;border:1px solid var(--border)">' +
         '<div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:7px;transition:width 0.8s cubic-bezier(0.4,0,0.2,1);min-width:' + (value>0?'14px':'0') + ';opacity:0.9"></div>' +
-        (pct > 12 ? '<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:9px;font-family:IBM Plex Mono,monospace;color:rgba(255,255,255,0.9);font-weight:600;letter-spacing:0.05em">' + pct + '%</span>' : '') +
+        (pct > 12 ? '<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:9px;font-family:IBM Plex Mono,monospace;color:rgba(255,255,255,0.9);font-weight:600">' + pct + '%</span>' : '') +
       '</div>' +
     '</div>';
   }
 
-  function kpiCard(label, value, sub, color, icon) {
-    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden">' +
-      '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:' + color + ';opacity:0.9"></div>' +
+  function kpiCard(label, value, sub, color, onclick) {
+    const clickable = onclick ? 'cursor:pointer;' : '';
+    const onclickAttr = onclick ? 'onclick="' + onclick + '"' : '';
+    const hoverAttrs = onclick ? 'onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.borderColor=\'' + color + '\'" onmouseleave="this.style.transform=\'\';this.style.borderColor=\'var(--border)\'"' : '';
+    return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden;transition:transform 0.15s,border-color 0.15s;' + clickable + '" ' + onclickAttr + ' ' + hoverAttrs + '>' +
+      '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:' + color + '"></div>' +
       '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);font-family:IBM Plex Mono,monospace">' + label + '</div>' +
       '<div style="font-size:48px;font-family:IBM Plex Mono,monospace;font-weight:500;color:' + color + ';line-height:1;margin:4px 0">' + value + '</div>' +
       '<div style="font-size:11px;color:var(--text3);font-family:IBM Plex Mono,monospace">' + sub + '</div>' +
+      (onclick ? '<div style="font-size:10px;color:' + color + ';font-family:IBM Plex Mono,monospace;margin-top:2px;opacity:0.7">tap to filter →</div>' : '') +
     '</div>';
   }
 
   function healthGauge(score) {
     const color = score >= 80 ? '#18c058' : score >= 60 ? '#c0a000' : '#e85050';
-    const label = score >= 80 ? 'GOOD' : score >= 60 ? 'FAIR' : 'AT RISK';
+    const label = score >= 80 ? '● GOOD' : score >= 60 ? '● FAIR' : '● AT RISK';
     return '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:20px;display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden">' +
-      '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:' + color + ';opacity:0.9"></div>' +
+      '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:' + color + '"></div>' +
       '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.12em;color:var(--text3);font-family:IBM Plex Mono,monospace">Health score</div>' +
-      '<div style="display:flex;align-items:baseline;gap:10px;margin:4px 0">' +
+      '<div style="display:flex;align-items:baseline;gap:8px;margin:4px 0">' +
         '<div style="font-size:48px;font-family:IBM Plex Mono,monospace;font-weight:500;color:' + color + ';line-height:1">' + score + '</div>' +
-        '<div style="font-size:20px;font-family:IBM Plex Mono,monospace;color:var(--text3)">/100</div>' +
+        '<div style="font-size:18px;font-family:IBM Plex Mono,monospace;color:var(--text3)">/100</div>' +
       '</div>' +
-      '<div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:' + color + ';font-weight:500;letter-spacing:0.08em">' + label + '</div>' +
+      '<div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:' + color + ';font-weight:600;letter-spacing:0.1em">' + label + '</div>' +
       '<div style="height:6px;background:var(--bg3);border-radius:3px;margin-top:4px;overflow:hidden">' +
         '<div style="height:100%;width:' + score + '%;background:' + color + ';border-radius:3px;transition:width 1s"></div>' +
       '</div>' +
     '</div>';
   }
 
-  let statusBars = Object.entries(byStatus).map(([k,v]) => powerBar(k, v, total, statusColors[k] || '#888')).join('');
-  let prioBars = Object.entries(byPriority).map(([k,v]) => powerBar(k, v, total, prioColors[k] || '#888')).join('');
+  let statusBars = Object.entries(byStatus).map(([k,v]) =>
+    powerBar(k, v, total, statusColors[k] || '#888', v > 0 ? "goToTickets({status:'" + k + "'})" : '')
+  ).join('');
+
+  let prioBars = Object.entries(byPriority).map(([k,v]) =>
+    powerBar(k, v, total, prioColors[k] || '#888', v > 0 ? "goToTickets({priority:'" + k + "'})" : '')
+  ).join('');
+
   let projEntries = Object.entries(byProject).sort((a,b) => b[1]-a[1]).slice(0,8);
   let projMax = projEntries.length ? projEntries[0][1] : 1;
-  let projBars = projEntries.map(([k,v]) => powerBar(k, v, projMax, '#1a8fd4', v + (v===1?' ticket':' tickets'))).join('');
+  let projBars = projEntries.map(([k,v]) =>
+    powerBar(k, v, projMax, '#1a8fd4', "goToTickets({project:'" + k.replace(/'/g,"\\'") + "'})")
+  ).join('');
 
   el.innerHTML =
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:28px">' +
-      kpiCard('Total', total, 'tickets', '#1a8fd4') +
-      kpiCard('Active', inProgress, 'in progress', '#1a8fd4') +
-      kpiCard('Pending', pending, 'to start', '#6b7f99') +
-      kpiCard('Blocked', blocked, blocked>0?'⚠ urgent':'clear', blocked>0?'#e85050':'#18c058') +
-      kpiCard('Critical', critical, critical>0?'⚠ urgent':'clear', critical>0?'#e85050':'#18c058') +
-      kpiCard('Done', done, completionPct+'% complete', '#18c058') +
+      kpiCard('Total', total, 'all tickets', '#1a8fd4', '') +
+      kpiCard('Active', inProgress, 'in progress', '#1a8fd4', "goToTickets({status:'In progress'})") +
+      kpiCard('Pending', pending, 'to start', '#6b7f99', "goToTickets({status:'Pending'})") +
+      kpiCard('Blocked', blocked, blocked>0?'urgent':'clear', blocked>0?'#e85050':'#18c058', blocked>0?"goToTickets({status:'Blocked'})":'' ) +
+      kpiCard('Critical', critical, critical>0?'urgent':'clear', critical>0?'#e85050':'#18c058', critical>0?"goToTickets({priority:'Critical'})":'' ) +
+      kpiCard('Done', done, completionPct+'% complete', '#18c058', done>0?"goToTickets({status:'Done'})":'' ) +
       healthGauge(healthScore) +
     '</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">' +
       '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:24px">' +
-        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:24px;display:flex;align-items:center;gap:10px">' +
+        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:8px;display:flex;align-items:center;gap:10px">' +
           '<span style="width:4px;height:16px;background:#1a8fd4;border-radius:2px;display:inline-block"></span>BY STATUS' +
-        '</div>' + statusBars +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:16px">Click a row to filter tickets</div>' +
+        statusBars +
       '</div>' +
       '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:24px">' +
-        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:24px;display:flex;align-items:center;gap:10px">' +
+        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:8px;display:flex;align-items:center;gap:10px">' +
           '<span style="width:4px;height:16px;background:#e85050;border-radius:2px;display:inline-block"></span>BY PRIORITY' +
-        '</div>' + prioBars +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:16px">Click a row to filter tickets</div>' +
+        prioBars +
       '</div>' +
       '<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:24px">' +
-        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:24px;display:flex;align-items:center;gap:10px">' +
+        '<div style="font-size:10px;text-transform:uppercase;letter-spacing:0.14em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:8px;display:flex;align-items:center;gap:10px">' +
           '<span style="width:4px;height:16px;background:#1a6aad;border-radius:2px;display:inline-block"></span>BY PROJECT' +
         '</div>' +
+        '<div style="font-size:10px;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:16px">Click a row to filter tickets</div>' +
         (projBars || '<div style="color:var(--text3);font-size:12px;font-family:IBM Plex Mono,monospace">No data yet</div>') +
       '</div>' +
     '</div>';
 }
-
 // ── ALERTS VIEW ────────────────────────────────────────
 function renderAlerts() {
   const el = document.getElementById('alerts-content');
