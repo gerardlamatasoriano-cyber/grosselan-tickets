@@ -883,6 +883,16 @@
       <option value="Medium">Medium</option>
       <option value="Low">Low</option>
     </select>
+    <div class="filter-sep"></div>
+    <span class="filter-label">Status:</span>
+    <select class="filter-select" id="status-filter" onchange="applyFilters()">
+      <option value="all">All</option>
+      <option value="Pending">Pending</option>
+      <option value="In progress">In progress</option>
+      <option value="Blocked">Blocked</option>
+      <option value="Done">Done</option>
+      <option value="Delivered">Delivered</option>
+    </select>
     <div class="view-toggle">
       <button class="view-btn active" id="vb-kanban" onclick="switchView('kanban')" title="Kanban">
         <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="3" height="10" rx="1"/><rect x="5.5" y="2" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="9" rx="1"/></svg>
@@ -1589,7 +1599,10 @@ function filteredTickets() {
     const asgnOk = asgn === 'all' || tAssigned.includes(asgn);
     const prio = document.getElementById('priority-filter').value;
     const prioOk = prio === 'all' || t.priority === prio;
-    return projOk && asgnOk && prioOk;
+    const statusEl = document.getElementById('status-filter');
+    const statusVal = statusEl ? statusEl.value : 'all';
+    const statusOk = statusVal === 'all' || t.status === statusVal;
+    return projOk && asgnOk && prioOk && statusOk;
   });
 }
 
@@ -1891,6 +1904,8 @@ function goToTickets(filters) {
     const pf = document.getElementById('priority-filter');
     if (pf) pf.value = 'all';
   }
+  const sf = document.getElementById('status-filter');
+  if (sf) sf.value = filters.status || 'all';
   if (filters.project) {
     activeProject = filters.project;
     refreshFilters();
