@@ -669,233 +669,67 @@
 
   /* ── MOBILE RESPONSIVE ─────────────────────────────── */
   @media (max-width: 768px) {
-
-    /* Body */
-    body { flex-direction: column; height: 100dvh; overflow: hidden; font-size: 14px; }
-
-    /* SIDEBAR — hidden drawer */
-    .sidebar {
-      position: fixed;
-      top: 0; left: 0;
-      width: 80vw; max-width: 300px;
-      height: 100dvh;
-      z-index: 300;
-      transform: translateX(-100%);
-      transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
-      box-shadow: none;
-    }
-    .sidebar.open {
-      transform: translateX(0);
-      box-shadow: 4px 0 24px rgba(0,0,0,0.18);
-    }
-    .sidebar-overlay {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 299;
-    }
+    body { flex-direction: column; height: 100dvh; overflow: hidden; }
+    .sidebar { position: fixed; top: 0; left: 0; width: 80vw; max-width: 300px; height: 100dvh; z-index: 300; transform: translateX(-100%); transition: transform 0.25s cubic-bezier(0.4,0,0.2,1); }
+    .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.18); }
+    .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 299; }
     .sidebar-overlay.open { display: block; }
-
-    /* MOBILE TOPBAR */
-    .topbar {
-      padding: 0 16px;
-      height: 52px;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-    .topbar-title { font-size: 13px; }
+    .topbar { padding: 0 12px; height: 52px; gap: 8px; flex-shrink: 0; }
+    .topbar-title { font-size: 12px; }
     .n8n-status { display: none; }
-    /* hide desktop topbar buttons, show only hamburger + new ticket */
     .topbar .btn:not(.btn-primary):not(#mob-sync-btn) { display: none; }
-    .topbar .btn-primary { padding: 6px 12px; font-size: 12px; }
-
-    /* Hamburger button */
-    .mob-hamburger {
-      display: flex;
-      align-items: center; justify-content: center;
-      width: 36px; height: 36px;
-      background: var(--bg3);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      cursor: pointer;
-      flex-shrink: 0;
-    }
+    .topbar .btn-primary { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+    .mob-hamburger { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; min-width: 36px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; flex-shrink: 0; }
     .mob-hamburger svg { width: 18px; height: 18px; color: var(--text2); }
-
-    /* Sync pill in topbar */
-    #mob-sync-btn {
-      display: inline-flex !important;
-      padding: 5px 10px;
-      font-size: 11px;
-    }
-
-    /* SYNC BAR — compact */
-    .sync-bar {
-      padding: 4px 14px;
-      font-size: 10px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex-shrink: 0;
-    }
-
-    /* METRICS — 2×2 grid */
-    .metrics {
-      grid-template-columns: repeat(2, 1fr);
-      flex-shrink: 0;
-    }
+    #mob-sync-btn { display: inline-flex !important; padding: 5px 10px; font-size: 11px; white-space: nowrap; }
+    .sync-bar { padding: 4px 12px; font-size: 10px; overflow-x: auto; overflow-y: hidden; white-space: nowrap; flex-shrink: 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .sync-bar::-webkit-scrollbar { display: none; }
+    .metrics { grid-template-columns: repeat(2, 1fr); flex-shrink: 0; }
     .metric { padding: 10px 14px; }
     .metric-value { font-size: 22px; }
     .metric-label { font-size: 10px; margin-bottom: 4px; }
     .metric-sub { font-size: 10px; }
-
-    /* FILTERS — horizontal scroll */
-    .filters {
-      padding: 8px 14px;
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      gap: 6px;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-      flex-shrink: 0;
-    }
+    .filters { padding: 8px 12px; flex-wrap: nowrap; overflow-x: auto; gap: 6px; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; }
     .filters::-webkit-scrollbar { display: none; }
     .filter-sep { display: none; }
     .view-toggle { margin-left: 0; flex-shrink: 0; }
-    .filter-select { font-size: 12px; padding: 4px 8px; }
-    .filter-label { white-space: nowrap; }
-
-    /* MAIN */
+    .filter-select { font-size: 12px; padding: 4px 8px; max-width: 130px; }
+    .filter-label { white-space: nowrap; flex-shrink: 0; }
     .main { overflow: hidden; height: 100%; }
-
-    /* KANBAN — vertical stack (one column per status, scrollable) */
-    .board-wrapper {
-      overflow-x: hidden;
-      overflow-y: auto;
-      padding: 12px 14px 80px;
-      -webkit-overflow-scrolling: touch;
-    }
-    .board {
-      flex-direction: column;
-      min-width: unset;
-      height: auto;
-      gap: 0;
-    }
-    .column {
-      width: 100%;
-      min-width: unset;
-      max-height: none;
-    }
-    .col-body {
-      overflow-y: visible;
-      max-height: none;
-    }
-    /* Collapsible columns on mobile */
+    .board-wrapper { overflow-x: hidden; overflow-y: auto; padding: 12px 12px 80px; -webkit-overflow-scrolling: touch; }
+    .board { flex-direction: column; min-width: unset; height: auto; gap: 0; }
+    .column { width: 100%; min-width: unset; max-height: none; }
+    .col-body { overflow-y: visible; max-height: none; }
     .col-header { cursor: pointer; padding: 10px 4px; }
-    .col-header::after {
-      content: '▾';
-      margin-left: auto;
-      font-size: 12px;
-      color: var(--text3);
-      transition: transform 0.2s;
-    }
+    .col-header::after { content: "▾"; margin-left: auto; font-size: 12px; color: var(--text3); transition: transform 0.2s; }
     .column.collapsed .col-header::after { transform: rotate(-90deg); }
-    .column.collapsed .col-body,
-    .column.collapsed .add-ticket-btn { display: none; }
-
-    /* Ticket cards — bigger tap targets */
+    .column.collapsed .col-body, .column.collapsed .add-ticket-btn { display: none; }
     .ticket { padding: 14px; }
     .ticket-title { font-size: 14px; margin-bottom: 10px; }
-
-    /* TABLE VIEW */
     .table-wrapper { padding: 0 0 80px; }
-    .tickets-table { font-size: 12px; }
-    .tickets-table th, .tickets-table td { padding: 8px 10px; }
-    /* Hide less-important columns on small screens */
-    .tickets-table th:nth-child(3),
-    .tickets-table td:nth-child(3),
-    .tickets-table th:nth-child(4),
-    .tickets-table td:nth-child(4) { display: none; }
-
-    /* MODALS — fullscreen on mobile */
+    .tickets-table th:nth-child(3), .tickets-table td:nth-child(3),
+    .tickets-table th:nth-child(4), .tickets-table td:nth-child(4) { display: none; }
     .modal-overlay { align-items: flex-end; padding: 0; }
-    .modal {
-      width: 100vw;
-      max-width: 100vw;
-      max-height: 92dvh;
-      border-radius: 16px 16px 0 0;
-      border-left: none; border-right: none; border-bottom: none;
-      padding: 20px 18px 32px;
-    }
+    .modal { width: 100vw; max-width: 100vw; max-height: 92dvh; border-radius: 16px 16px 0 0; border-left: none; border-right: none; border-bottom: none; padding: 20px 16px 32px; }
     .modal-header { margin-bottom: 16px; }
+    #detail-modal .modal-header > div { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    #detail-modal .modal-header .btn { padding: 6px 10px; font-size: 11px; }
     .form-row-2 { grid-template-columns: 1fr; gap: 0; }
-    .form-input, .form-select, .form-textarea {
-      font-size: 16px; /* prevents iOS zoom */
-      padding: 10px 12px;
-    }
+    .form-input, .form-select, .form-textarea { font-size: 16px; padding: 10px 12px; }
     .modal-footer { flex-direction: column-reverse; gap: 8px; }
     .modal-footer .btn { width: 100%; justify-content: center; padding: 12px; font-size: 14px; }
-
-    /* DETAIL MODAL — also fullscreen */
     #detail-modal .modal { max-height: 95dvh; }
-    .detail-key { min-width: 80px; width: 80px; }
+    .detail-key { min-width: 76px; width: 76px; font-size: 10px; }
     .detail-field { padding: 8px 0; }
-
-    /* SETTINGS MODAL */
     #settings-modal .modal { max-height: 95dvh; }
-
-    /* VIEWS — side padding */
-    #view-team, #view-projects, #view-summary, #view-alerts, #view-calendar {
-      padding: 14px 14px 80px !important;
-      overflow-y: auto;
-    }
-
-    /* TOAST — above bottom nav */
-    .toast { bottom: 72px; right: 14px; left: 14px; text-align: center; font-size: 12px; }
-
-    /* BOTTOM NAV BAR */
-    .mob-bottom-nav {
-      display: flex;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 60px;
-      background: var(--bg2);
-      border-top: 1px solid var(--border);
-      z-index: 200;
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-    .mob-nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 3px;
-      cursor: pointer;
-      color: var(--text3);
-      font-size: 10px;
-      font-family: 'IBM Plex Mono', monospace;
-      transition: color 0.15s;
-      -webkit-tap-highlight-color: transparent;
-    }
+    #view-team, #view-projects, #view-summary, #view-alerts, #view-calendar { padding: 14px 12px 80px !important; overflow-y: auto; }
+    .toast { bottom: 72px; right: 12px; left: 12px; text-align: center; font-size: 12px; }
+    .mob-bottom-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; height: 60px; background: var(--bg2); border-top: 1px solid var(--border); z-index: 200; padding-bottom: env(safe-area-inset-bottom); }
+    .mob-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; color: var(--text3); font-size: 10px; font-family: "IBM Plex Mono", monospace; transition: color 0.15s; -webkit-tap-highlight-color: transparent; position: relative; }
     .mob-nav-item.active { color: var(--accent); }
     .mob-nav-item svg { width: 20px; height: 20px; }
-    .mob-nav-badge {
-      position: absolute;
-      top: 6px;
-      background: var(--accent);
-      color: var(--bg2);
-      font-size: 9px;
-      min-width: 16px;
-      height: 16px;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      padding: 0 4px;
-      font-family: 'IBM Plex Mono', monospace;
-    }
+    .mob-nav-badge { position: absolute; top: 6px; background: var(--accent); color: var(--bg2); font-size: 9px; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 4px; font-family: "IBM Plex Mono", monospace; }
   }
-
-  /* Desktop: hide mobile-only elements */
   @media (min-width: 769px) {
     .mob-hamburger { display: none; }
     .mob-bottom-nav { display: none; }
@@ -906,11 +740,11 @@
 </head>
 <body>
 
-<!-- SIDEBAR OVERLAY (mobile) -->
+<!-- SIDEBAR -->
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <!-- SIDEBAR -->
-<aside class="sidebar" id="sidebar">
+<aside class="sidebar">
   <div class="sidebar-header">
     <div class="sidebar-logo">GrossELAN</div>
     <div class="sidebar-sub">Operations · Tickets</div>
@@ -1263,7 +1097,7 @@
 
 <!-- MOBILE BOTTOM NAV -->
 <nav class="mob-bottom-nav" id="mob-bottom-nav">
-  <div class="mob-nav-item active" id="mbn-tickets" onclick="setViewMob('kanban', this)" style="position:relative">
+  <div class="mob-nav-item active" id="mbn-tickets" onclick="setViewMob('kanban', this)">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="4" height="10" rx="1"/><rect x="6" y="3" width="4" height="7" rx="1"/><rect x="11" y="3" width="4" height="9" rx="1"/></svg>
     <span id="mbn-badge" class="mob-nav-badge" style="display:none">0</span>
     Tickets
@@ -1396,8 +1230,6 @@ function saveSettings() {
   updateN8nStatus();
   closeModal('settings-modal');
   showToast('Settings saved');
-  // Restart auto-sync with new webhook config
-  if (config.webhookGet) startAutoSync();
 }
 
 function updateUserDisplay() {
@@ -1443,9 +1275,20 @@ async function syncFromNotion() {
   try {
     const res = await fetch(config.webhookGet, { method: 'GET' });
     const data = await res.json();
-    const items = Array.isArray(data) ? data : (data.tickets || data.results || data.items || []);
+    const items = Array.isArray(data) ? data : (data.tickets || data.results || []);
     if (items.length) {
-      tickets = items.map(mapTicket);
+      tickets = items.map(t => ({
+        id: t.id || nextId(),
+        title: t.title || t.Title || '',
+        description: t.description || t.Description || '',
+        project: t.project || t.Project || '',
+        assigned: Array.isArray(t.assigned) ? t.assigned : (t.assigned || t.Assigned ? (t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : []),
+        priority: t.priority || t.Priority || 'Medium',
+        status: t.status || t.Status || 'Pending',
+        deadline: t.deadline || t.Deadline || '',
+        notionId: t.notionId || t.notion_id || t.id || '',
+        createdAt: t.createdAt || new Date().toISOString()
+      }));
       save();
       renderBoard();
       updateMetrics();
@@ -1539,35 +1382,17 @@ async function saveTicket() {
     const idx = tickets.findIndex(t => t.id === editingId);
     if (idx !== -1) {
       tickets[idx] = { ...tickets[idx], ...payload };
-      const updated = tickets[idx];
-      sendNotification('ticket_updated', updated, config.username);
+      sendNotification('status_changed', tickets[idx], config.username);
       if (config.webhookUpdate) {
         try {
           await fetch(config.webhookUpdate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: updated.id,
-              notionId: updated.notionId || '',
-              notion_id: updated.notionId || '',
-              title: updated.title,
-              description: updated.description,
-              project: updated.project,
-              assigned: updated.assigned,
-              priority: updated.priority,
-              status: updated.status,
-              deadline: updated.deadline,
-              changedBy: config.username
-            })
+            body: JSON.stringify({ ...tickets[idx] })
           });
-          showToast('Ticket updated · Synced to Notion ✓');
-        } catch(e) {
-          console.warn('N8N update failed:', e);
-          showToast('Ticket updated locally (N8N unreachable)', true);
-        }
-      } else {
-        showToast('Ticket updated (local — no N8N configured)');
+        } catch(e) { console.warn('N8N update failed:', e); }
       }
+      showToast('Ticket updated');
     }
   } else {
     const newTicket = { id: nextId(), ...payload, createdAt: new Date().toISOString() };
@@ -1667,36 +1492,19 @@ function quickStatus(id, status) {
     showToast('You are not assigned to this ticket', true);
     return;
   }
-  const prevStatus = t.status;
   t.status = status;
   save();
   renderBoard();
   updateMetrics();
   openTicketDetail(id);
-  showToast(id + ' → ' + status + (config.webhookUpdate ? ' · Syncing...' : ''));
+  showToast(id + ' → ' + status);
   sendNotification('status_changed', t, config.username);
   if (config.webhookUpdate) {
     fetch(config.webhookUpdate, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: t.id,
-        notionId: t.notionId || '',
-        notion_id: t.notionId || '',
-        title: t.title,
-        description: t.description,
-        project: t.project,
-        assigned: t.assigned,
-        priority: t.priority,
-        status: t.status,
-        deadline: t.deadline,
-        changedBy: config.username
-      })
-    }).then(() => {
-      showToast(id + ' → ' + status + ' · Synced ✓');
-    }).catch(() => {
-      showToast(id + ' → ' + status + ' (local only)', true);
-    });
+      body: JSON.stringify(t)
+    }).catch(() => {});
   }
 }
 
@@ -1707,20 +1515,14 @@ async function deleteCurrentTicket() {
   if (!confirm(`Delete ticket ${t.id} "${t.title}"?\nThis cannot be undone.`)) return;
   const btn = document.getElementById('delete-ticket-btn');
   const orig = btn.innerHTML;
-  btn.innerHTML = '<span class="loading-spinner"></span> Deleting...';
+  btn.innerHTML = '<span class="loading-spinner"></span>';
   btn.disabled = true;
-  if (config.webhookDelete) {
+  if (config.webhookDelete && t.notionId) {
     try {
       await fetch(config.webhookDelete, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: t.id,
-          notionId: t.notionId || '',
-          notion_id: t.notionId || '',
-          title: t.title,
-          deletedBy: config.username
-        })
+        body: JSON.stringify({ notionId: t.notionId })
       });
     } catch(e) { console.warn('N8N delete failed:', e); }
   }
@@ -1731,7 +1533,7 @@ async function deleteCurrentTicket() {
   renderBoard();
   updateMetrics();
   refreshFilters();
-  showToast(t.id + ' deleted' + (config.webhookDelete ? ' · Removed from Notion ✓' : ''));
+  showToast(t.id + ' deleted');
   btn.innerHTML = orig;
   btn.disabled = false;
 }
@@ -1839,8 +1641,6 @@ function renderBoard() {
       body.appendChild(card);
     });
   });
-  // Mobile: collapsible columns
-  setTimeout(initMobileColumns, 0);
 }
 
 function renderTable() {
@@ -1882,8 +1682,6 @@ function updateMetrics() {
   document.getElementById('m-delivered-sub').textContent = delivered.length > 0 ? '↑ vs last month' : '0 this month';
   document.getElementById('m-projects').textContent = projects.length;
   document.getElementById('m-proj-sub').textContent = projects.length > 0 ? `${[...new Set(projects)].length} location(s)` : 'No active projects';
-  // Mobile badge
-  updateMobBadge(active.length);
 }
 
 function refreshFilters() {
@@ -1949,7 +1747,6 @@ function setView(v) {
   if (v === 'summary') renderSummary();
   if (v === 'alerts') renderAlerts();
   if (v === 'calendar') renderCalendar();
-  // close sidebar on mobile after nav
   closeSidebar();
 }
 
@@ -2233,83 +2030,6 @@ function checkDeadlineWarnings() {
   });
 }
 
-// ── MOBILE ──────────────────────────────────────────────
-function openSidebar() {
-  document.getElementById('sidebar').classList.add('open');
-  document.getElementById('sidebar-overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').classList.remove('open');
-  document.body.style.overflow = '';
-}
-
-function setViewMob(v, el) {
-  closeSidebar();
-  // update bottom nav active state
-  document.querySelectorAll('.mob-nav-item').forEach(x => x.classList.remove('active'));
-  if (el) el.classList.add('active');
-  // reuse existing setView logic — simulate click on corresponding nav-item
-  const viewMap = {
-    'kanban': 0, 'projects': 1, 'team': 2, 'calendar': 3, 'summary': 4, 'alerts': 5
-  };
-  // directly call the view switch
-  ['kanban','projects','team','calendar','summary','alerts'].forEach(x => {
-    const el2 = document.getElementById('view-' + x);
-    if (el2) el2.classList.toggle('hidden', x !== v);
-  });
-  const tableView = document.getElementById('view-table');
-  if (tableView) tableView.classList.add('hidden');
-  document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
-  const filterBar = document.getElementById('filter-bar');
-  filterBar.style.display = v === 'kanban' ? 'flex' : 'none';
-  currentView = v === 'kanban' ? 'kanban' : v;
-  const topTitle = document.querySelector('.topbar-title');
-  if (topTitle) {
-    const titles = { kanban: '// ticket_board', projects: '// active_projects', team: '// team_directory', calendar: '// deadline_calendar', summary: '// operations_summary', alerts: '// alerts' };
-    topTitle.textContent = titles[v] || '// ticket_board';
-  }
-  if (v === 'kanban') renderBoard();
-  if (v === 'team') renderTeam();
-  if (v === 'projects') renderProjects();
-  if (v === 'summary') renderSummary();
-  if (v === 'alerts') renderAlerts();
-  if (v === 'calendar') renderCalendar();
-}
-
-// Make columns collapsible on mobile (toggle on col-header click)
-function initMobileColumns() {
-  if (window.innerWidth > 768) return;
-  document.querySelectorAll('.column').forEach(col => {
-    const header = col.querySelector('.col-header');
-    if (!header) return;
-    // Collapse Done and Delivered by default on mobile
-    const titleEl = col.querySelector('.col-title');
-    if (titleEl && (titleEl.textContent === 'Done' || titleEl.textContent === 'Delivered')) {
-      col.classList.add('collapsed');
-    }
-    header.addEventListener('click', (e) => {
-      // Don't collapse if clicking add-ticket
-      if (e.target.closest('.add-ticket-btn')) return;
-      col.classList.toggle('collapsed');
-    });
-  });
-}
-
-// Update bottom nav badge
-function updateMobBadge(count) {
-  const badge = document.getElementById('mbn-badge');
-  if (!badge) return;
-  if (count > 0) {
-    badge.textContent = count > 99 ? '99+' : count;
-    badge.style.display = 'flex';
-  } else {
-    badge.style.display = 'none';
-  }
-}
-
 load();
 
 // Load user from URL param: ?user=GL
@@ -2355,6 +2075,96 @@ updateMetrics();
 })();
 
 // Auto-sync from Notion on load and every 5 minutes
+async function autoSync() {
+  if (!config.webhookGet) return;
+  try {
+    const res = await fetch(config.webhookGet, { method: 'GET' });
+    const data = await res.json();
+    const items = Array.isArray(data) ? data : (data.tickets || data.results || []);
+    if (items.length) {
+      tickets = items.map(t => ({
+        id: t.id || '',
+        title: t.title || t.Title || '',
+        description: t.description || t.Description || '',
+        project: t.project || t.Project || '',
+        assigned: Array.isArray(t.assigned) ? t.assigned : (t.assigned || t.Assigned ? (t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : []),
+        priority: t.priority || t.Priority || 'Medium',
+        status: t.status || t.Status || 'Pending',
+        deadline: t.deadline || t.Deadline || '',
+        notionId: t.notionId || t.notion_id || '',
+        createdAt: t.createdAt || new Date().toISOString()
+      }));
+      save();
+      renderBoard();
+      updateMetrics();
+      refreshFilters();
+      const now = new Date();
+      document.getElementById('sync-text').textContent = `Synced from Notion · ${items.length} tickets · ${now.toLocaleTimeString()}`;
+    }
+  } catch(e) { console.warn('Auto-sync failed:', e); }
+}
+
+// Sync on load, then every 5 minutes
+if (config.webhookGet) {
+  autoSync();
+  setInterval(autoSync, 5 * 60 * 1000);
+}
+
+// ── MOBILE FUNCTIONS ─────────────────────────────────
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function setViewMob(v, el) {
+  closeSidebar();
+  document.querySelectorAll('.mob-nav-item').forEach(x => x.classList.remove('active'));
+  if (el) el.classList.add('active');
+  ['kanban','projects','team','calendar','summary','alerts'].forEach(x => {
+    const el2 = document.getElementById('view-' + x);
+    if (el2) el2.classList.toggle('hidden', x !== v);
+  });
+  document.getElementById('view-table').classList.add('hidden');
+  document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+  document.getElementById('filter-bar').style.display = v === 'kanban' ? 'flex' : 'none';
+  currentView = v === 'kanban' ? 'kanban' : v;
+  const topTitle = document.querySelector('.topbar-title');
+  if (topTitle) {
+    const titles = { kanban: '// ticket_board', projects: '// projects', team: '// team', calendar: '// calendar', summary: '// summary', alerts: '// alerts' };
+    topTitle.textContent = titles[v] || '// ticket_board';
+  }
+  if (v === 'kanban') renderBoard();
+  if (v === 'team') renderTeam();
+  if (v === 'projects') renderProjects();
+  if (v === 'summary') renderSummary();
+  if (v === 'alerts') renderAlerts();
+  if (v === 'calendar') renderCalendar();
+}
+function initMobileColumns() {
+  if (window.innerWidth > 768) return;
+  document.querySelectorAll('.column').forEach(col => {
+    const header = col.querySelector('.col-header');
+    if (!header) return;
+    const titleEl = col.querySelector('.col-title');
+    if (titleEl && (titleEl.textContent === 'Done' || titleEl.textContent === 'Delivered')) col.classList.add('collapsed');
+    const newHeader = header.cloneNode(true);
+    header.parentNode.replaceChild(newHeader, header);
+    newHeader.addEventListener('click', () => col.classList.toggle('collapsed'));
+  });
+}
+function updateMobBadge(count) {
+  const badge = document.getElementById('mbn-badge');
+  if (!badge) return;
+  if (count > 0) { badge.textContent = count > 99 ? '99+' : count; badge.style.display = 'flex'; }
+  else { badge.style.display = 'none'; }
+}
+
+// ── AUTO-SYNC ─────────────────────────────────────────
 let autoSyncCountdown = 300;
 let autoSyncInterval = null;
 
@@ -2364,11 +2174,8 @@ function mapTicket(t) {
     title: t.title || t.Title || t.name || t.Name || '',
     description: t.description || t.Description || '',
     project: t.project || t.Project || '',
-    assigned: Array.isArray(t.assigned) ? t.assigned :
-              Array.isArray(t.Assigned) ? t.Assigned :
-              (t.assigned || t.Assigned)
-                ? String(t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean)
-                : [],
+    assigned: Array.isArray(t.assigned) ? t.assigned : Array.isArray(t.Assigned) ? t.Assigned :
+              (t.assigned || t.Assigned) ? String(t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : [],
     priority: t.priority || t.Priority || 'Medium',
     status: t.status || t.Status || 'Pending',
     deadline: t.deadline || t.Deadline || '',
@@ -2385,10 +2192,7 @@ async function autoSync() {
     const items = Array.isArray(data) ? data : (data.tickets || data.results || data.items || []);
     if (items.length) {
       tickets = items.map(mapTicket);
-      save();
-      renderBoard();
-      updateMetrics();
-      refreshFilters();
+      save(); renderBoard(); updateMetrics(); refreshFilters();
       const now = new Date();
       document.getElementById('sync-text').textContent = `Auto-synced from Notion · ${items.length} tickets · ${now.toLocaleTimeString()} · Next sync in 5:00`;
       autoSyncCountdown = 300;
@@ -2415,10 +2219,8 @@ function startAutoSync() {
   }, 1000);
 }
 
-// Sync on load, then every 5 min with countdown
-if (config.webhookGet) {
-  startAutoSync();
-}
+if (config.webhookGet) startAutoSync();
+
 </script>
 </body>
 </html>
