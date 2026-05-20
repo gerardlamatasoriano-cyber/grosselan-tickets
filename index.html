@@ -1137,7 +1137,11 @@ const CFG_KEY = 'grosselan_config_v1';
 
 let tickets = [];
 let config = {
-  webhookCreate: '', webhookUpdate: '', webhookGet: '', webhookDelete: '', webhookNotify: '',
+  webhookCreate: 'https://primary-production-96473.up.railway.app/webhook/tickets-create',
+  webhookUpdate: 'https://primary-production-96473.up.railway.app/webhook/tickets-update',
+  webhookGet: 'https://primary-production-96473.up.railway.app/webhook/tickets-get',
+  webhookDelete: 'https://primary-production-96473.up.railway.app/webhook/tickets-delete',
+  webhookNotify: 'https://primary-production-96473.up.railway.app/webhook/tickets-notify',
   username: 'Gerard La Mata', initials: 'GL', role: 'Project Manager', isAdmin: true,
   team: [
     { name: 'Gerard La Mata', initials: 'GL', role: 'Project Manager' },
@@ -1171,11 +1175,22 @@ const STATUS_COLORS = {
 };
 const PRIORITY_ORDER = { Critical: 0, High: 1, Medium: 2, Low: 3 };
 
+// Hardcoded webhooks — never overridden by localStorage
+const WEBHOOKS = {
+  webhookCreate: 'https://primary-production-96473.up.railway.app/webhook/tickets-create',
+  webhookUpdate: 'https://primary-production-96473.up.railway.app/webhook/tickets-update',
+  webhookGet: 'https://primary-production-96473.up.railway.app/webhook/tickets-get',
+  webhookDelete: 'https://primary-production-96473.up.railway.app/webhook/tickets-delete',
+  webhookNotify: 'https://primary-production-96473.up.railway.app/webhook/tickets-notify',
+};
+
 function load() {
   const raw = localStorage.getItem(STORE_KEY);
   if (raw) tickets = JSON.parse(raw);
   const cfg = localStorage.getItem(CFG_KEY);
   if (cfg) config = { ...config, ...JSON.parse(cfg) };
+  // Always enforce hardcoded webhooks — no user can break them
+  Object.assign(config, WEBHOOKS);
 }
 
 function save() {
@@ -1237,6 +1252,8 @@ function saveSettings() {
   refreshFilters();
   renderBoard();
   updateN8nStatus();
+  // Re-enforce hardcoded webhooks
+  Object.assign(config, WEBHOOKS);
   closeModal('settings-modal');
   showToast('Settings saved');
 }
@@ -1273,8 +1290,7 @@ function updateN8nStatus() {
 
 async function syncFromNotion() {
   if (!config.webhookGet) {
-    showToast('Set the GET webhook URL in Settings first', true);
-    openSettings();
+    showToast('Sync not configured — contact your admin', true);
     return;
   }
   const btn = document.querySelector('button[onclick="syncFromNotion()"]');
