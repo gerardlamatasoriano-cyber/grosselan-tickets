@@ -815,8 +815,14 @@
       <div class="n8n-dot" id="n8n-dot"></div>
       <span id="n8n-status-text">N8N disconnected</span>
     </div>
-    <button class="btn" onclick="syncFromNotion()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>Sync Notion</button>
-    <button class="btn" id="mob-sync-btn" onclick="syncFromNotion()"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>Sync</button>
+    <button class="btn" onclick="syncFromNotion()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>
+      Sync Notion
+    </button>
+    <button class="btn" id="mob-sync-btn" onclick="syncFromNotion()">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 8a7 7 0 0012.5-3M15 8a7 7 0 01-12.5 3M13 5l2.5-0.5L13 2M3 11l-2.5.5L3 14"/></svg>
+      Sync
+    </button>
     <button class="btn" onclick="exportCSV()">
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 12h10M8 2v8M5 7l3 3 3-3"/></svg>
       Export
@@ -1676,7 +1682,7 @@ function updateMetrics() {
   document.getElementById('m-delivered-sub').textContent = delivered.length > 0 ? '↑ vs last month' : '0 this month';
   document.getElementById('m-projects').textContent = projects.length;
   document.getElementById('m-proj-sub').textContent = projects.length > 0 ? `${[...new Set(projects)].length} location(s)` : 'No active projects';
-  updateMobBadge(active.length);
+  if (typeof updateMobBadge === 'function') updateMobBadge(active.length);
 }
 
 function refreshFilters() {
@@ -2000,7 +2006,7 @@ function renderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
     const dayTickets = ticketsByDay[d] || [];
-    html += '<div style="background:var(--bg2);min-height:' + (isMob?'52px':'80px') + ';padding:' + (isMob?'3px':'6px') + ';'border-top:' + (isToday ? '2px solid var(--accent)' : '1px solid transparent') + '">' +
+    html += '<div style="background:var(--bg2);min-height:' + (isMob?'52px':'80px') + ';padding:' + (isMob?'3px':'6px') + ';border-top:' + (isToday ? '2px solid var(--accent)' : '1px solid transparent') + '">' +
       '<div style="font-size:12px;font-family:monospace;font-weight:' + (isToday ? '600' : '400') + ';color:' + (isToday ? 'var(--accent)' : 'var(--text2)') + ';margin-bottom:4px">' + d + '</div>' +
       dayTickets.slice(0, isMob?1:3).map(t => {
         const pc = getPriorityClass(t.priority);
