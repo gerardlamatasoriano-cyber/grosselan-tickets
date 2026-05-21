@@ -2396,6 +2396,7 @@ const TT_WEBHOOKS = {
   history:    'https://primary-production-96473.up.railway.app/webhook/history',
   timeUpdate: 'https://primary-production-96473.up.railway.app/webhook/time-update',
   timeDelete: 'https://primary-production-96473.up.railway.app/webhook/time-delete',
+  timeCreate: 'https://primary-production-96473.up.railway.app/webhook/time-create',
 };
 const TT_PROJECTS = [
   'Allgemein 2026','AV Albtal BA2','Büro',
@@ -2608,9 +2609,7 @@ function ttRenderClock() {
   let btns = '';
   if (ttState === 'idle') {
     btns = `<button onclick="ttCheckin()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius2);padding:14px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:IBM Plex Sans,sans-serif">
-      <svg viewBox="0 0 20 20" fill="currentColor" style="width:18px;height:18px"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="8,7 14,10 8,13"/></svg>Check in</button>
-    <button onclick="ttOpenManual()" style="width:100%;margin-top:8px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px;font-size:12px;cursor:pointer;font-family:IBM Plex Sans,sans-serif">
-      + Add manual entry</button>`;
+      <svg viewBox="0 0 20 20" fill="currentColor" style="width:18px;height:18px"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="8,7 14,10 8,13"/></svg>Check in</button>`;
   } else if (ttState === 'running') {
     btns = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button onclick="ttPause()" style="background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
@@ -2767,6 +2766,12 @@ function ttRenderHistory() {
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:4px">${l}</div>
           <div style="font-size:24px;font-family:IBM Plex Mono,monospace;font-weight:500;color:${c}">${v}</div>
         </div>`).join('')}
+    </div>
+    <div style="margin-bottom:16px">
+      <button onclick="ttOpenManual()" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px 16px;font-size:13px;cursor:pointer;color:var(--text2);font-family:IBM Plex Sans,sans-serif;display:flex;align-items:center;gap:8px;width:100%;justify-content:center;transition:all .15s" onmouseenter="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseleave="this.style.borderColor='var(--border)';this.style.color='var(--text2)'">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px"><path d="M8 2v12M2 8h12"/></svg>
+        + Add manual entry
+      </button>
     </div>
     ${!ttHistoryLoaded ? '<div style="padding:40px;text-align:center;color:var(--text3);font-family:IBM Plex Mono,monospace">Loading...</div>'
       : ttHistory.length === 0 ? '<div style="padding:40px;text-align:center;color:var(--text3);font-family:IBM Plex Mono,monospace">No entries for this period</div>'
@@ -3132,20 +3137,38 @@ async function ttSaveManual() {
   const tag      = document.getElementById('tt-man-tag').value;
   const breakMin = parseInt(document.getElementById('tt-man-break').value)||0;
   if (!checkin||!checkout) { showToast('Check-in and check-out required',true); return; }
+  if (new Date(checkout) <= new Date(checkin)) { showToast('Check-out must be after check-in',true); return; }
   const btn=document.querySelector('#tt-manual-overlay button[onclick="ttSaveManual()"]');
   if(btn){btn.textContent='Saving...';btn.disabled=true;}
   try {
-    const r=await fetch(TT_WEBHOOKS.checkin,{
+    const r=await fetch(TT_WEBHOOKS.timeCreate,{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ person:config.username, project, tag, timestamp:new Date(checkin).toISOString(), checkout:new Date(checkout).toISOString(), breakMin, manual:true })
+      body: JSON.stringify({
+        person: config.username,
+        project,
+        tag,
+        checkin:  new Date(checkin).toISOString(),
+        checkout: new Date(checkout).toISOString(),
+        breakMin
+      })
     });
+    const data = await r.json().catch(()=>({}));
     if(r.ok){
       document.getElementById('tt-manual-overlay')?.remove();
       ttHistoryLoaded=false;
-      showToast('Entry added ✓');
+      await ttLoadHistory();
       renderTimeTracker();
-    } else { showToast('Save failed',true); }
-  } catch(e){ showToast('Connection error',true); }
+      showToast('Entry added ✓');
+    } else {
+      const btn2=document.querySelector('#tt-manual-overlay button');
+      if(btn2){btn2.textContent='Add entry';btn2.disabled=false;}
+      showToast('Save failed: '+(data.error||r.status),true);
+    }
+  } catch(e){
+    const btn2=document.querySelector('#tt-manual-overlay button');
+    if(btn2){btn2.textContent='Add entry';btn2.disabled=false;}
+    showToast('Connection error',true);
+  }
 }
 
 // ── INIT ─────────────────────────────────────────────
