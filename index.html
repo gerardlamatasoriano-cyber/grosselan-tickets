@@ -2487,10 +2487,12 @@ function ttIsoToInput(iso) {
 async function ttCall(action, extra) {
   const proj = document.getElementById('tt-project');
   const tag  = document.getElementById('tt-tag');
+  const notesInput = document.getElementById('tt-notes');
   const payload = Object.assign({
     person: config.username,
     project: proj ? proj.value : '',
     tag: tag ? tag.value : '',
+    notes: notesInput ? notesInput.value.trim() : '',
     timestamp: ttNow()
   }, extra || {});
   try {
@@ -2608,7 +2610,11 @@ function ttRenderClock() {
   // Action buttons
   let btns = '';
   if (ttState === 'idle') {
-    btns = `<button onclick="ttCheckin()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius2);padding:14px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:IBM Plex Sans,sans-serif">
+    btns = `<div style="margin-bottom:8px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:5px">Description (optional)</div>
+      <input id="tt-notes" type="text" placeholder="e.g. I/O testing, documentation..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:IBM Plex Sans,sans-serif;font-size:13px;padding:8px 10px;outline:none">
+    </div>
+    <button onclick="ttCheckin()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius2);padding:14px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:IBM Plex Sans,sans-serif">
       <svg viewBox="0 0 20 20" fill="currentColor" style="width:18px;height:18px"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="8,7 14,10 8,13"/></svg>Check in</button>`;
   } else if (ttState === 'running') {
     btns = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -2617,15 +2623,21 @@ function ttRenderClock() {
       <button onclick="ttCheckout()" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
         <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><rect x="3" y="3" width="14" height="14" rx="1"/></svg>Check out</button>
     </div>
-    <button onclick="ttNewEntry()" style="width:100%;margin-top:8px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px;font-size:12px;cursor:pointer;font-family:IBM Plex Sans,sans-serif">
-      + New entry (change project/activity)</button>`;
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <button onclick="ttEditRunning()" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
+        <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px"><path d="M9 2l3 3-7 7H2v-3z"/></svg>Edit timing</button>
+      <button onclick="ttNewEntry()" style="background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px;font-size:12px;cursor:pointer;font-family:IBM Plex Sans,sans-serif">
+        + New entry</button>
+    </div>`;
   } else {
     btns = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <button onclick="ttResume()" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
         <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="8,7 14,10 8,13"/></svg>Resume</button>
       <button onclick="ttCheckout()" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
         <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><rect x="3" y="3" width="14" height="14" rx="1"/></svg>Check out</button>
-    </div>`;
+    </div>
+    <button onclick="ttEditRunning()" style="width:100%;margin-top:8px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px"><path d="M9 2l3 3-7 7H2v-3z"/></svg>Edit timing</button>`;
   }
 
   // Today's entries
@@ -2641,6 +2653,7 @@ function ttRenderClock() {
           <div style="flex:1;min-width:0">
             <div style="font-size:11px;font-weight:600;color:var(--accent);font-family:IBM Plex Mono,monospace;margin-bottom:2px">${e.tag||'—'}</div>
             <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.project||'—'}</div>
+            ${e.notes ? `<div style="font-size:11px;color:var(--text3);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.notes}</div>` : ''}
             <div style="font-size:11px;color:var(--text3);font-family:IBM Plex Mono,monospace">${ttFmtTime(e.startTime)}${e.endTime?' – '+ttFmtTime(e.endTime):' – now'}</div>
           </div>
           <div style="text-align:right;flex-shrink:0">
@@ -2724,6 +2737,7 @@ function ttRenderHistory() {
         <div style="flex:1;min-width:0">
           <div style="font-size:11px;font-weight:600;color:var(--accent);font-family:IBM Plex Mono,monospace">${e.tag||'—'}</div>
           <div style="font-size:12px;color:var(--text2)">${e.project||e.person||'—'}</div>
+          ${e.notes ? `<div style="font-size:11px;color:var(--text3);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px">${e.notes}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0;margin-right:8px">
           <div style="font-size:12px;font-family:IBM Plex Mono,monospace;color:var(--text)">${ttFmtTime(e.checkin)} – ${ttFmtTime(e.checkout)}</div>
@@ -2929,7 +2943,9 @@ async function ttCheckin() {
     ttStart=Date.now(); ttPausedMs=0;
     const proj=document.getElementById('tt-project');
     const tag=document.getElementById('tt-tag');
-    ttEntries.push({project:proj?.value||'',tag:tag?.value||'',startTime:new Date().toISOString(),endTime:null,status:'active',breakMs:0});
+    const notesEl = document.getElementById('tt-notes');
+    const notes = notesEl ? notesEl.value.trim() : '';
+    ttEntries.push({project:proj?.value||'',tag:tag?.value||'',notes,startTime:new Date().toISOString(),endTime:null,status:'active',breakMs:0});
     ttState='running'; ttSaveState(); showToast('Checked in ✓'); renderTimeTracker();
   } else if (res.status===409) {
     showToast('Active entry found on server — syncing...', true);
@@ -2981,6 +2997,91 @@ async function ttNewEntry() {
       } else { showToast('Connection error',true); }
     },500);
   } else { showToast('Connection error',true); }
+}
+
+
+// ── EDIT RUNNING ENTRY ───────────────────────────────
+function ttEditRunning() {
+  const e = ttEntries[ttEntries.length - 1];
+  const pad = n => String(n).padStart(2,'0');
+  const d = ttStart ? new Date(ttStart) : new Date();
+  const startVal = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const breakVal = Math.round(ttPausedMs / 60000);
+  const projectOpts = TT_PROJECTS.map(p=>`<option value="${p}" ${(e&&e.project===p)?'selected':''}>${p}</option>`).join('');
+  const tagOpts = TT_TAGS.map(t=>`<option value="${t}" ${(e&&e.tag===t)?'selected':''}>${t}</option>`).join('');
+  const overlay = document.createElement('div');
+  overlay.id = 'tt-re-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius2);width:480px;max-width:95vw;padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <span style="font-family:IBM Plex Mono,monospace;font-size:13px;font-weight:500;color:var(--text)">// edit_running_entry</span>
+        <div onclick="document.getElementById('tt-re-overlay').remove()" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px"><path d="M2 2l10 10M12 2L2 12"/></svg>
+        </div>
+      </div>
+      <div style="background:var(--green-bg);border:1px solid var(--green-border);border-radius:var(--radius);padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--green);font-family:IBM Plex Mono,monospace">
+        ● Timer recalculates instantly from new check-in time
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Actual check-in time</label>
+        <input type="datetime-local" id="tt-re-checkin" value="${startVal}" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Break accumulated (minutes)</label>
+        <input type="number" id="tt-re-break" value="${breakVal}" min="0" step="5" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Project</label>
+          <select id="tt-re-project" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">${projectOpts}</select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Activity</label>
+          <select id="tt-re-tag" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">${tagOpts}</select>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description</label>
+        <input type="text" id="tt-re-notes" value="${(e&&e.notes)||''}" placeholder="e.g. I/O testing, KA Steinenbronn..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border)">
+        <button onclick="document.getElementById('tt-re-overlay').remove()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2)">Cancel</button>
+        <button onclick="ttSaveRunningEdit()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer">Update timer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function ttSaveRunningEdit() {
+  const checkinVal = document.getElementById('tt-re-checkin').value;
+  const breakMin   = parseInt(document.getElementById('tt-re-break').value) || 0;
+  const project    = document.getElementById('tt-re-project').value;
+  const tag        = document.getElementById('tt-re-tag').value;
+  const notes      = document.getElementById('tt-re-notes').value.trim();
+  if (!checkinVal) { showToast('Check-in time required', true); return; }
+  const btn = document.querySelector('#tt-re-overlay button[onclick="ttSaveRunningEdit()"]');
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+  // Update local state immediately — timer recalculates
+  ttStart = new Date(checkinVal).getTime();
+  ttPausedMs = breakMin * 60000;
+  const e = ttEntries[ttEntries.length - 1];
+  if (e) { e.startTime = new Date(checkinVal).toISOString(); e.breakMs = ttPausedMs; e.project = project; e.tag = tag; e.notes = notes; }
+  ttSaveState();
+  // Update Notion if pageId available
+  const pageId = e && e.pageId;
+  if (pageId) {
+    try {
+      await fetch(TT_WEBHOOKS.timeUpdate, {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ pageId, checkin: new Date(checkinVal).toISOString(), breakMin, project, tag, notes })
+      });
+    } catch(err) { console.warn('Notion update failed:', err); }
+  }
+  document.getElementById('tt-re-overlay')?.remove();
+  renderTimeTracker();
+  ttTick();
+  showToast('Timer updated ✓');
 }
 
 // ── DELETE ENTRY ─────────────────────────────────────
@@ -3042,6 +3143,10 @@ function ttOpenEdit(entry) {
         <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Activity</label>
         <select id="tt-edit-tag" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">${tagOpts}</select>
       </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description</label>
+        <input type="text" id="tt-edit-notes" value="${entry.notes||''}" placeholder="e.g. I/O testing, documentation..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border)">
         <button onclick="ttCloseEdit()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2)">Cancel</button>
         <button onclick="ttSaveEdit()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer">Save changes</button>
@@ -3064,10 +3169,12 @@ async function ttSaveEdit() {
   const btn = document.querySelector('#tt-edit-overlay button[onclick="ttSaveEdit()"]');
   if(btn){btn.textContent='Saving...';btn.disabled=true;}
   try {
+    const editNotes = document.getElementById('tt-edit-notes')?.value.trim();
     const body = { pageId:ttEditEntry.pageId, breakMin, tag };
     if (checkin) body.checkin = new Date(checkin).toISOString();
     if (checkout) body.checkout = new Date(checkout).toISOString();
     if (project) body.project = project;
+    if (editNotes !== undefined) body.notes = editNotes;
     const r = await fetch(TT_WEBHOOKS.timeUpdate, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(body)
@@ -3124,6 +3231,10 @@ function ttOpenManual() {
         <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Break (minutes)</label>
         <input type="number" id="tt-man-break" value="60" min="0" step="5" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
       </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description (optional)</label>
+        <input type="text" id="tt-man-notes" placeholder="e.g. I/O testing, KA Steinenbronn..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border)">
         <button onclick="document.getElementById('tt-manual-overlay').remove()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2)">Cancel</button>
         <button onclick="ttSaveManual()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer">Add entry</button>
@@ -3151,7 +3262,8 @@ async function ttSaveManual() {
         tag,
         checkin:  new Date(checkin).toISOString(),
         checkout: new Date(checkout).toISOString(),
-        breakMin
+        breakMin,
+        notes: document.getElementById('tt-man-notes')?.value.trim() || ''
       })
     });
     const data = await r.json().catch(()=>({}));
