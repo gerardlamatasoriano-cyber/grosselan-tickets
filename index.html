@@ -1798,7 +1798,7 @@ function setView(v) {
   const _syncBar = document.querySelector('.sync-bar');
   if (_metrics) _metrics.style.display = v === 'time' ? 'none' : '';
   if (_syncBar) _syncBar.style.display = v === 'time' ? 'none' : '';
-  if (v === 'time') renderTimeTracker();
+  if (v === 'time') { renderTimeTracker(); ttSyncStatus(); }
   closeSidebar();
 }
 
@@ -2364,7 +2364,7 @@ function setViewMob(v, el) {
   const _s = document.querySelector('.sync-bar');
   if (_m) _m.style.display = v === 'time' ? 'none' : '';
   if (_s) _s.style.display = v === 'time' ? 'none' : '';
-  if (v === 'time') renderTimeTracker();
+  if (v === 'time') { renderTimeTracker(); ttSyncStatus(); }
 }
 function initMobileColumns() {
   if (window.innerWidth > 768) return;
@@ -2931,7 +2931,9 @@ async function ttCheckin() {
     const tag=document.getElementById('tt-tag');
     ttEntries.push({project:proj?.value||'',tag:tag?.value||'',startTime:new Date().toISOString(),endTime:null,status:'active',breakMs:0});
     ttState='running'; ttSaveState(); showToast('Checked in ✓'); renderTimeTracker();
-  } else if (res.status===409) { showToast(res.data.error||'Already checked in',true);
+  } else if (res.status===409) {
+    showToast('Active entry found on server — syncing...', true);
+    await ttSyncStatus();
   } else { showToast('Connection error',true); }
 }
 async function ttPause() {
@@ -3173,4 +3175,57 @@ async function ttSaveManual() {
 
 // ── INIT ─────────────────────────────────────────────
 ttRestoreState();
+
+// When opening Time Tracker, sync status from server
+async function ttSyncStatus() {
+  try {
+    const r = await fetch(TT_WEBHOOKS.status, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ person: config.username })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (data.status === 'running' && data.entry) {
+      // Server has active entry — restore it
+      ttState = 'running';
+      ttStart = new Date(data.entry.checkin).getTime();
+      ttPausedMs = (data.entry.breakMin || 0) * 60000;
+      ttPauseStart = null;
+      // Add to local entries if not already there
+      if (ttEntries.length === 0) {
+        ttEntries = [{
+          project: data.entry.project || '',
+          tag: data.entry.tag || '',
+          startTime: data.entry.checkin,
+          endTime: null,
+          status: 'active',
+          breakMs: ttPausedMs
+        }];
+      }
+      ttSaveState();
+      renderTimeTracker();
+    } else if (data.status === 'paused' && data.entry) {
+      ttState = 'paused';
+      ttStart = new Date(data.entry.checkin).getTime();
+      ttPausedMs = (data.entry.breakMin || 0) * 60000;
+      ttPauseStart = Date.now();
+      if (ttEntries.length === 0) {
+        ttEntries = [{
+          project: data.entry.project || '',
+          tag: data.entry.tag || '',
+          startTime: data.entry.checkin,
+          endTime: null,
+          status: 'paused',
+          breakMs: ttPausedMs
+        }];
+      }
+      ttSaveState();
+      renderTimeTracker();
+    } else if (data.status === 'idle' && ttState !== 'idle') {
+      // Server is idle but local thinks running — reset
+      ttState = 'idle'; ttStart = null; ttPausedMs = 0;
+      ttClearState();
+      renderTimeTracker();
+    }
+  } catch(e) { console.warn('Status sync failed:', e); }
+}
 </script>
