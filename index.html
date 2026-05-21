@@ -2395,6 +2395,7 @@ const TT_WEBHOOKS = {
   status:     'https://primary-production-96473.up.railway.app/webhook/status',
   history:    'https://primary-production-96473.up.railway.app/webhook/history',
   timeUpdate: 'https://primary-production-96473.up.railway.app/webhook/time-update',
+  timeDelete: 'https://primary-production-96473.up.railway.app/webhook/time-delete',
 };
 const TT_PROJECTS = [
   'Allgemein 2026','AV Albtal BA2','Büro',
@@ -2730,10 +2731,16 @@ function ttRenderHistory() {
           <div style="font-size:18px;font-family:IBM Plex Mono,monospace;font-weight:500;color:var(--accent)">${ttMinToHhMm(e.totalMin||0)}h</div>
           ${e.breakMin ? `<div style="font-size:10px;color:var(--text3)">⏸ ${e.breakMin}min break</div>` : ''}
         </div>
-        <button onclick="ttOpenEdit(${JSON.stringify(e).replace(/"/g,'&quot;')})" 
-          style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;cursor:pointer;color:var(--text3);flex-shrink:0" title="Edit">
-          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px"><path d="M9 2l3 3-7 7H2v-3z"/></svg>
-        </button>
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+          <button onclick="ttOpenEdit(${JSON.stringify(e).replace(/"/g,'&quot;')})" 
+            style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;cursor:pointer;color:var(--text3)" title="Edit">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px"><path d="M9 2l3 3-7 7H2v-3z"/></svg>
+          </button>
+          <button onclick="ttDeleteEntry('${e.pageId}')" 
+            style="background:var(--red-bg);border:1px solid var(--red-border);border-radius:var(--radius);padding:6px 8px;cursor:pointer;color:var(--red)" title="Delete">
+            <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px"><path d="M2 3h10M5 3V2h4v1M6 6v4M8 6v4M3 3l1 9h6l1-9"/></svg>
+          </button>
+        </div>
       </div>`).join('');
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border)">
@@ -2744,7 +2751,7 @@ function ttRenderHistory() {
     </div>`;
   }).join('');
 
-  return `<div style="max-width:680px;margin:0 auto;padding:16px">
+  return `<div style="padding:16px 24px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <span style="font-size:13px;font-weight:500;color:var(--text)">History</span>
       <input type="month" id="tt-month-filter" value="${y}-${mo}"
@@ -2802,14 +2809,14 @@ function ttRenderCalendar() {
   });
 
   const dayHeaders=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  let grid=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden">`;
+  let grid=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden;width:100%">`;
   dayHeaders.forEach(d=>{grid+=`<div style="background:var(--bg3);padding:6px;text-align:center;font-size:10px;font-family:IBM Plex Mono,monospace;color:var(--text3)">${d}</div>`;});
   for(let i=0;i<startDay;i++) grid+=`<div style="background:var(--bg);min-height:64px"></div>`;
   for(let d=1;d<=daysInMonth;d++){
     const isToday=d===today.getDate()&&ttCalMonth===today.getMonth()&&ttCalYear===today.getFullYear();
     const isWeekend=((startDay+d-1)%7)>=5;
     const dd=byDay[d];
-    grid+=`<div style="background:${isToday?'var(--blue-bg)':isWeekend?'var(--bg3)':'var(--bg2)'};min-height:64px;padding:5px;border-top:${isToday?'2px solid var(--accent)':'1px solid transparent'}">
+    grid+=`<div style="background:${isToday?'var(--blue-bg)':isWeekend?'var(--bg3)':'var(--bg2)'};min-height:90px;padding:5px;border-top:${isToday?'2px solid var(--accent)':'1px solid transparent'}">
       <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:${isToday?'var(--accent)':'var(--text2)'};font-weight:${isToday?'600':'400'}">${d}</div>
       ${dd?`<div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--green);font-weight:500;margin-top:2px">${ttMinToHhMm(dd.min)}h</div>
         ${dd.entries.slice(0,1).map(e=>`<div style="font-size:9px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.tag||''}</div>`).join('')}`:''}
@@ -2828,7 +2835,7 @@ function ttRenderCalendar() {
     </div>`;
   }).join('');
 
-  return `<div style="max-width:680px;margin:0 auto;padding:16px">
+  return `<div style="padding:16px 24px">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
       <button onclick="ttCalNav(-1)" class="btn" style="padding:5px 10px">←</button>
       <span style="flex:1;text-align:center;font-family:IBM Plex Mono,monospace;font-size:14px;font-weight:500;color:var(--text)">${monthNames[ttCalMonth]} ${ttCalYear}</span>
@@ -2879,7 +2886,7 @@ function ttRenderSummaryTT() {
   }
   const projMax=Math.max(...Object.values(byProj),1);
   const tagMax=Math.max(...Object.values(byTag),1);
-  return `<div style="max-width:680px;margin:0 auto;padding:16px">
+  return `<div style="padding:16px 24px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <span style="font-size:13px;font-weight:500;color:var(--text)">Monthly Summary</span>
       <input type="month" value="${y}-${mo}" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:12px;padding:5px 8px;outline:none" onchange="ttFilterMonth(this.value)">
@@ -2969,6 +2976,24 @@ async function ttNewEntry() {
   } else { showToast('Connection error',true); }
 }
 
+// ── DELETE ENTRY ─────────────────────────────────────
+async function ttDeleteEntry(pageId) {
+  if (!pageId) { showToast('No page ID', true); return; }
+  if (!confirm('Delete this time entry? This cannot be undone.')) return;
+  try {
+    const r = await fetch(TT_WEBHOOKS.timeDelete, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ pageId })
+    });
+    if (r.ok) {
+      ttHistoryLoaded = false;
+      await ttLoadHistory();
+      renderTimeTracker();
+      showToast('Entry deleted ✓');
+    } else { showToast('Delete failed', true); }
+  } catch(e) { showToast('Connection error', true); }
+}
+
 // ── EDIT ENTRY MODAL ─────────────────────────────────
 function ttOpenEdit(entry) {
   ttEditEntry = entry;
@@ -3003,6 +3028,10 @@ function ttOpenEdit(entry) {
           style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
       </div>
       <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Project</label>
+        <select id="tt-edit-project" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">${projectOpts}</select>
+      </div>
+      <div style="margin-bottom:14px">
         <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Activity</label>
         <select id="tt-edit-tag" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">${tagOpts}</select>
       </div>
@@ -3023,13 +3052,18 @@ async function ttSaveEdit() {
   const checkout = document.getElementById('tt-edit-checkout').value;
   const breakMin = parseInt(document.getElementById('tt-edit-break').value)||0;
   const tag      = document.getElementById('tt-edit-tag').value;
+  const project  = document.getElementById('tt-edit-project')?.value || '';
   if (!ttEditEntry?.pageId) { showToast('No page ID — cannot save',true); return; }
   const btn = document.querySelector('#tt-edit-overlay button[onclick="ttSaveEdit()"]');
   if(btn){btn.textContent='Saving...';btn.disabled=true;}
   try {
+    const body = { pageId:ttEditEntry.pageId, breakMin, tag };
+    if (checkin) body.checkin = new Date(checkin).toISOString();
+    if (checkout) body.checkout = new Date(checkout).toISOString();
+    if (project) body.project = project;
     const r = await fetch(TT_WEBHOOKS.timeUpdate, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ pageId:ttEditEntry.pageId, checkin:checkin?new Date(checkin).toISOString():undefined, checkout:checkout?new Date(checkout).toISOString():undefined, breakMin, tag })
+      body: JSON.stringify(body)
     });
     const data = await r.json().catch(()=>({}));
     if(r.ok){
