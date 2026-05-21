@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>grossELAN GmbH · OPS</title>
+<title>GrossELAN · Tickets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -2378,14 +2378,14 @@ function updateMobBadge(count) {
 
 // ── TIME TRACKER ─────────────────────────────────────
 const TT_WEBHOOKS = {
-  checkin:  'https://primary-production-96473.up.railway.app/webhook/checkin',
-  pause:    'https://primary-production-96473.up.railway.app/webhook/pause',
-  resume:   'https://primary-production-96473.up.railway.app/webhook/resume',
-  checkout: 'https://primary-production-96473.up.railway.app/webhook/checkout',
-  status:   'https://primary-production-96473.up.railway.app/webhook/status',
-  history:  'https://primary-production-96473.up.railway.app/webhook/history',
+  checkin:    'https://primary-production-96473.up.railway.app/webhook/checkin',
+  pause:      'https://primary-production-96473.up.railway.app/webhook/pause',
+  resume:     'https://primary-production-96473.up.railway.app/webhook/resume',
+  checkout:   'https://primary-production-96473.up.railway.app/webhook/checkout',
+  status:     'https://primary-production-96473.up.railway.app/webhook/status',
+  history:    'https://primary-production-96473.up.railway.app/webhook/history',
+  timeUpdate: 'https://primary-production-96473.up.railway.app/webhook/time-update',
 };
-
 const TT_PROJECTS = [
   'Allgemein 2026','AV Albtal BA2','Büro',
   'Elektrotechnische Sanierung RÜB Fischweier',
@@ -2395,43 +2395,81 @@ const TT_PROJECTS = [
 ];
 const TT_TAGS = [
   '501 Montage','900 Fahrzeit','750 Büro',
-  '104 Baubesprechung – Ing. Büro','101 CAD','201 SPS',
+  '104 Baubesprechung','101 CAD','201 SPS',
   '301 PLS','401 Werkstatt','601 Rapport',
   '701 Urlaub','702 Krankheit','703 Zeitausgleich'
 ];
+const TT_BILL_UNIT = 10; // minutes — minimum billable unit
 
-let ttState = 'idle';
-let ttStart = null;
+// ── State ────────────────────────────────────────────
+let ttState    = 'idle';   // idle | running | paused
+let ttStart    = null;     // ms timestamp when last started
+let ttPausedMs = 0;        // total paused ms accumulated
 let ttPauseStart = null;
-let ttPausedMs = 0;
 let ttInterval = null;
-let ttEntries = [];          // today's local entries
-let ttHistory = [];          // loaded from Notion
-let ttActiveTab = 'clock';   // clock | history | calendar | summary
-let ttCalYear = new Date().getFullYear();
+let ttEntries  = [];       // today's local entries
+let ttHistory  = [];       // loaded from Notion
+let ttActiveTab = 'clock';
+let ttCalYear  = new Date().getFullYear();
 let ttCalMonth = new Date().getMonth();
 let ttHistoryLoaded = false;
+let ttEditEntry = null;    // entry being edited
 
-function ttNow() { return new Date().toISOString(); }
-function ttFmt(ms) {
-  if (ms < 0) ms = 0;
-  const h = Math.floor(ms/3600000), m = Math.floor((ms%3600000)/60000), s = Math.floor((ms%60000)/1000);
-  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+// ── Persist state ────────────────────────────────────
+function ttSaveState() {
+  localStorage.setItem('tt_state', JSON.stringify({
+    state: ttState, start: ttStart, pausedMs: ttPausedMs,
+    pauseStart: ttPauseStart, entries: ttEntries
+  }));
+}
+function ttRestoreState() {
+  try {
+    const raw = localStorage.getItem('tt_state');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    ttState = s.state || 'idle';
+    ttStart = s.start || null;
+    ttPausedMs = s.pausedMs || 0;
+    ttPauseStart = s.pauseStart || null;
+    ttEntries = s.entries || [];
+    // If was paused and now restoring, keep paused from now
+    if (ttState === 'paused' && !ttPauseStart) ttPauseStart = Date.now();
+  } catch(e) {}
+}
+function ttClearState() {
+  localStorage.removeItem('tt_state');
+}
+
+// ── Helpers ──────────────────────────────────────────
+function ttBillableMin(ms) {
+  // Round UP to nearest 10-min block, minimum 10
+  const raw = Math.max(0, ms);
+  const mins = raw / 60000;
+  return Math.max(TT_BILL_UNIT, Math.ceil(mins / TT_BILL_UNIT) * TT_BILL_UNIT);
+}
+function ttFmtBill(ms) {
+  // Show HH:MM rounded to 10min blocks
+  const m = ttBillableMin(ms);
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return String(h).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
 }
 function ttFmtTime(iso) {
   if (!iso) return '--:--';
   const d = new Date(iso);
   return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
-function ttFmtDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  return d.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric'});
-}
 function ttMinToHhMm(min) {
-  if (!min && min !== 0) return '--';
+  if (!min && min !== 0) return '--:--';
   const h = Math.floor(min/60), m = min%60;
   return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
+}
+function ttNow() { return new Date().toISOString(); }
+function ttIsoToInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 async function ttCall(action, extra) {
@@ -2453,28 +2491,10 @@ async function ttCall(action, extra) {
   } catch(e) { return { ok: false, status: 0, data: {} }; }
 }
 
-async function ttLoadStatus() {
-  try {
-    const r = await fetch(TT_WEBHOOKS.status, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ person: config.username })
-    });
-    const data = await r.json().catch(() => ({}));
-    if (data.status === 'running' && data.entry) {
-      ttState = 'running';
-      ttStart = new Date(data.entry.checkin).getTime();
-      ttPausedMs = (data.entry.breakMin || 0) * 60000;
-    } else if (data.status === 'paused' && data.entry) {
-      ttState = 'paused';
-      ttPauseStart = Date.now();
-    }
-  } catch(e) {}
-}
-
 async function ttLoadHistory(dateFrom, dateTo) {
   const payload = { person: config.username };
   if (dateFrom) payload.dateFrom = dateFrom;
-  if (dateTo) payload.dateTo = dateTo;
+  if (dateTo)   payload.dateTo   = dateTo;
   try {
     const r = await fetch(TT_WEBHOOKS.history, {
       method: 'POST', headers: {'Content-Type':'application/json'},
@@ -2483,171 +2503,187 @@ async function ttLoadHistory(dateFrom, dateTo) {
     const data = await r.json().catch(() => []);
     ttHistory = Array.isArray(data) ? data : (data.entries || []);
     ttHistoryLoaded = true;
-  } catch(e) { ttHistory = []; }
+  } catch(e) { ttHistory = []; ttHistoryLoaded = true; }
 }
 
+// ── Main render ──────────────────────────────────────
 function renderTimeTracker() {
   const root = document.getElementById('time-tracker-root');
   if (!root) return;
 
-  // Tabs
   const tabs = [
-    { id: 'clock',    icon: '<circle cx="8" cy="8" r="6.5"/><path d="M8 4v4l2.5 2.5"/>', label: 'Clock' },
-    { id: 'history',  icon: '<rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M1 6h14M5 2v4M11 2v4"/>', label: 'History' },
-    { id: 'calendar', icon: '<rect x="1" y="2" width="14" height="13" rx="1.5"/><path d="M1 6h14M5 1v3M11 1v3"/>', label: 'Calendar' },
-    { id: 'summary',  icon: '<rect x="1" y="9" width="3" height="6" rx="1"/><rect x="6" y="5" width="3" height="10" rx="1"/><rect x="11" y="2" width="3" height="13" rx="1"/>', label: 'Summary' },
+    { id:'clock',    svg:'<circle cx="8" cy="8" r="6.5"/><path d="M8 4v4l2.5 2.5"/>',                                   label:'Clock'    },
+    { id:'history',  svg:'<path d="M2 4h12M2 8h10M2 12h8"/>',                                                            label:'History'  },
+    { id:'calendar', svg:'<rect x="1" y="2" width="14" height="13" rx="1.5"/><path d="M1 6h14M5 1v3M11 1v3"/>',          label:'Calendar' },
+    { id:'summary',  svg:'<rect x="1" y="9" width="3" height="6" rx="1"/><rect x="6" y="5" width="3" height="10" rx="1"/><rect x="11" y="2" width="3" height="13" rx="1"/>', label:'Summary' },
   ];
 
-  const tabBar = tabs.map(t => {
-    const active = ttActiveTab === t.id;
-    return `<div onclick="ttSetTab('${t.id}')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:10px 0;color:${active?'var(--accent)':'var(--text3)'};font-size:10px;font-family:IBM Plex Mono,monospace;-webkit-tap-highlight-color:transparent">
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:20px;height:20px">${t.icon}</svg>
-      ${t.label}
-    </div>`;
-  }).join('');
+  const tabBar = `<div style="display:flex;background:var(--bg2);border-top:1px solid var(--border)">
+    ${tabs.map(t => {
+      const a = ttActiveTab === t.id;
+      return `<div onclick="ttSetTab('${t.id}')" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:10px 0;color:${a?'var(--accent)':'var(--text3)'};font-size:10px;font-family:IBM Plex Mono,monospace;border-top:2px solid ${a?'var(--accent)':'transparent'};transition:all .15s">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:18px;height:18px">${t.svg}</svg>
+        ${t.label}
+      </div>`;
+    }).join('')}
+  </div>`;
 
   let content = '';
-  if (ttActiveTab === 'clock') content = ttRenderClock();
-  else if (ttActiveTab === 'history') content = ttRenderHistory();
+  if      (ttActiveTab === 'clock')    content = ttRenderClock();
+  else if (ttActiveTab === 'history')  content = ttRenderHistory();
   else if (ttActiveTab === 'calendar') content = ttRenderCalendar();
-  else if (ttActiveTab === 'summary') content = ttRenderSummaryTT();
+  else if (ttActiveTab === 'summary')  content = ttRenderSummaryTT();
 
   root.innerHTML = `
-    <div style="display:flex;flex-direction:column;height:100%">
-      <div style="flex:1;overflow-y:auto;padding-bottom:60px">${content}</div>
-      <div style="position:sticky;bottom:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:10">${tabBar}</div>
+    <div style="display:flex;flex-direction:column;height:100%;background:var(--bg)">
+      <div style="flex:1;overflow-y:auto">${content}</div>
+      ${tabBar}
     </div>`;
 
-  // Restart interval
+  // Restart tick
   if (ttInterval) clearInterval(ttInterval);
   if (ttState !== 'idle') {
-    ttInterval = setInterval(() => {
-      const disp = document.getElementById('tt-display');
-      if (!disp) { clearInterval(ttInterval); return; }
-      if (ttState === 'running') disp.textContent = ttFmt(Date.now() - ttStart - ttPausedMs);
-      else if (ttState === 'paused') disp.textContent = ttFmt(Date.now() - ttPauseStart);
-    }, 1000);
+    ttInterval = setInterval(ttTick, 10000); // update every 10 min
+    ttTick(); // immediate
   }
+}
+
+function ttTick() {
+  const disp = document.getElementById('tt-display');
+  if (!disp) { clearInterval(ttInterval); return; }
+  let ms = 0;
+  if (ttState === 'running') ms = Date.now() - ttStart - ttPausedMs;
+  else if (ttState === 'paused') ms = ttPauseStart - ttStart - ttPausedMs;
+  disp.textContent = ttFmtBill(ms);
 }
 
 function ttSetTab(tab) {
   ttActiveTab = tab;
-  if (tab === 'history' && !ttHistoryLoaded) {
-    const now = new Date();
-    const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0');
-    ttLoadHistory(`${y}-${m}-01`, `${y}-${m}-31`).then(() => renderTimeTracker());
-  } else if (tab === 'calendar') {
-    const now = new Date();
-    ttCalYear = now.getFullYear(); ttCalMonth = now.getMonth();
-    const y = ttCalYear, mo = String(ttCalMonth+1).padStart(2,'0');
-    ttLoadHistory(`${y}-${mo}-01`, `${y}-${mo}-31`).then(() => renderTimeTracker());
-  } else if (tab === 'summary') {
-    const now = new Date();
-    const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0');
-    ttLoadHistory(`${y}-${m}-01`, `${y}-${m}-31`).then(() => renderTimeTracker());
-  } else {
-    renderTimeTracker();
+  const now = new Date();
+  const y = now.getFullYear(), mo = String(now.getMonth()+1).padStart(2,'0');
+  if ((tab === 'history' || tab === 'summary') && !ttHistoryLoaded) {
+    ttLoadHistory(`${y}-${mo}-01`,`${y}-${mo}-31`).then(() => renderTimeTracker());
+    return;
   }
+  if (tab === 'calendar') {
+    ttCalYear = now.getFullYear(); ttCalMonth = now.getMonth();
+    ttLoadHistory(`${y}-${mo}-01`,`${y}-${mo}-31`).then(() => renderTimeTracker());
+    return;
+  }
+  renderTimeTracker();
 }
 
 // ── CLOCK TAB ────────────────────────────────────────
 function ttRenderClock() {
-  const person = config.username, initials = config.initials;
-  let timerMs = 0, timerColor = 'var(--text)', statusLabel = 'IDLE', dotColor = 'var(--text3)';
+  const projectOpts = TT_PROJECTS.map(p => `<option value="${p}">${p}</option>`).join('');
+  const tagOpts     = TT_TAGS.map(t => `<option value="${t}">${t}</option>`).join('');
+  const dis = ttState !== 'idle' ? 'disabled' : '';
+
+  let timerMs = 0;
+  if (ttState === 'running') timerMs = Date.now() - ttStart - ttPausedMs;
+  else if (ttState === 'paused') timerMs = ttPauseStart - ttStart - ttPausedMs;
+
+  let timerColor = 'var(--text3)', dotColor = 'var(--text3)', statusLabel = 'IDLE';
   let cardBg = 'var(--bg2)', cardBorder = 'var(--border)';
   if (ttState === 'running') {
-    timerMs = Date.now() - ttStart - ttPausedMs;
-    timerColor = 'var(--green)'; statusLabel = 'RUNNING';
-    dotColor = 'var(--green)'; cardBg = 'var(--green-bg)'; cardBorder = 'var(--green-border)';
+    timerColor = 'var(--green)'; dotColor = 'var(--green)'; statusLabel = 'RUNNING';
+    cardBg = 'var(--green-bg)'; cardBorder = 'var(--green-border)';
   } else if (ttState === 'paused') {
-    timerMs = Date.now() - ttPauseStart;
-    timerColor = 'var(--yellow)'; statusLabel = 'PAUSED';
-    dotColor = 'var(--yellow)'; cardBg = 'var(--yellow-bg)'; cardBorder = 'var(--yellow-border)';
+    timerColor = 'var(--yellow)'; dotColor = 'var(--yellow)'; statusLabel = 'PAUSED';
+    cardBg = 'var(--yellow-bg)'; cardBorder = 'var(--yellow-border)';
   }
 
-  const projectOpts = TT_PROJECTS.map(p => `<option value="${p}">${p}</option>`).join('');
-  const tagOpts = TT_TAGS.map(t => `<option value="${t}">${t}</option>`).join('');
-  const disabled = ttState !== 'idle' ? 'disabled style="opacity:0.5"' : '';
-
+  // Action buttons
   let btns = '';
   if (ttState === 'idle') {
-    btns = `<button onclick="ttCheckin()" style="grid-column:1/-1;background:var(--green);color:var(--bg2);border:none;border-radius:var(--radius2);padding:14px;font-size:14px;font-weight:600;font-family:IBM Plex Sans,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px"><circle cx="10" cy="10" r="8"/><polygon points="8,7 14,10 8,13" fill="currentColor" stroke="none"/></svg>Check in</button>`;
+    btns = `<button onclick="ttCheckin()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius2);padding:14px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:IBM Plex Sans,sans-serif">
+      <svg viewBox="0 0 20 20" fill="currentColor" style="width:18px;height:18px"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="8,7 14,10 8,13"/></svg>Check in</button>
+    <button onclick="ttOpenManual()" style="width:100%;margin-top:8px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px;font-size:12px;cursor:pointer;font-family:IBM Plex Sans,sans-serif">
+      + Add manual entry</button>`;
   } else if (ttState === 'running') {
-    btns = `
-      <button onclick="ttPause()" style="background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><rect x="5" y="4" width="3" height="12"/><rect x="12" y="4" width="3" height="12"/></svg>Pause</button>
-      <button onclick="ttCheckout()" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><rect x="3" y="3" width="14" height="14" rx="1"/></svg>Check out</button>
-      <button onclick="ttNewEntry()" style="grid-column:1/-1;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px;font-size:12px;cursor:pointer">
-        + New entry (change project/activity)</button>`;
+    btns = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button onclick="ttPause()" style="background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
+        <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><rect x="5" y="4" width="3" height="12"/><rect x="12" y="4" width="3" height="12"/></svg>Pause</button>
+      <button onclick="ttCheckout()" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
+        <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><rect x="3" y="3" width="14" height="14" rx="1"/></svg>Check out</button>
+    </div>
+    <button onclick="ttNewEntry()" style="width:100%;margin-top:8px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius2);padding:10px;font-size:12px;cursor:pointer;font-family:IBM Plex Sans,sans-serif">
+      + New entry (change project/activity)</button>`;
   } else {
-    btns = `
-      <button onclick="ttResume()" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><circle cx="10" cy="10" r="8"/><polygon points="8,7 14,10 8,13" fill="currentColor" stroke="none"/></svg>Resume</button>
-      <button onclick="ttCheckout()" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">
-        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><rect x="3" y="3" width="14" height="14" rx="1"/></svg>Check out</button>`;
+    btns = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button onclick="ttResume()" style="background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
+        <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="8,7 14,10 8,13"/></svg>Resume</button>
+      <button onclick="ttCheckout()" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);border-radius:var(--radius2);padding:12px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
+        <svg viewBox="0 0 20 20" fill="currentColor" style="width:14px;height:14px"><rect x="3" y="3" width="14" height="14" rx="1"/></svg>Check out</button>
+    </div>`;
   }
 
-  const entriesHtml = ttEntries.length === 0
-    ? `<div style="padding:20px;text-align:center;font-size:13px;color:var(--text3)">No entries yet today</div>`
-    : ttEntries.slice().reverse().map(e => {
+  // Today's entries
+  const todayRows = ttEntries.length === 0
+    ? `<div style="padding:20px;text-align:center;font-size:13px;color:var(--text3);font-family:IBM Plex Mono,monospace">No entries yet today</div>`
+    : ttEntries.slice().reverse().map((e,i) => {
         const isActive = e.status === 'active' || e.status === 'paused';
         const ms = isActive
           ? Math.max(0, Date.now() - new Date(e.startTime).getTime() - (e.breakMs||0))
-          : Math.max(0, (e.endTime ? new Date(e.endTime)-new Date(e.startTime) : 0) - (e.breakMs||0));
-        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);gap:10px">
+          : Math.max(0, (e.endTime ? new Date(e.endTime)-new Date(e.startTime):0)-(e.breakMs||0));
+        const billColor = isActive ? 'var(--green)' : 'var(--accent)';
+        return `<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:10px">
           <div style="flex:1;min-width:0">
-            <div style="font-size:11px;font-weight:500;color:var(--accent);font-family:IBM Plex Mono,monospace;margin-bottom:2px">${e.tag||''}</div>
-            <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.project||''}</div>
+            <div style="font-size:11px;font-weight:600;color:var(--accent);font-family:IBM Plex Mono,monospace;margin-bottom:2px">${e.tag||'—'}</div>
+            <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.project||'—'}</div>
+            <div style="font-size:11px;color:var(--text3);font-family:IBM Plex Mono,monospace">${ttFmtTime(e.startTime)}${e.endTime?' – '+ttFmtTime(e.endTime):' – now'}</div>
           </div>
           <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:12px;font-family:IBM Plex Mono,monospace;color:var(--text)">${ttFmtTime(e.startTime)}${e.endTime?' – '+ttFmtTime(e.endTime):' – now'}</div>
-            <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:${isActive?'var(--green)':'var(--text2)'}">${ttFmt(ms)}${isActive?' ▶':''}</div>
+            <div style="font-size:22px;font-family:IBM Plex Mono,monospace;font-weight:500;color:${billColor};line-height:1">${isActive?'<span id="tt-display">'+ttFmtBill(ms)+'</span>':ttFmtBill(ms)}</div>
+            <div style="font-size:10px;color:var(--text3);font-family:IBM Plex Mono,monospace">${isActive?'● running':'billable'}</div>
           </div>
         </div>`;
       }).join('');
 
-  return `<div style="max-width:520px;margin:0 auto;padding:16px">
-    <!-- Header -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div>
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-family:IBM Plex Mono,monospace">Time Tracker</div>
-        <div style="font-size:14px;color:var(--text);font-weight:500">${person}</div>
-      </div>
-      <div style="width:38px;height:38px;border-radius:50%;background:var(--accent2);color:var(--bg2);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;font-family:IBM Plex Mono,monospace">${initials}</div>
-    </div>
-    <!-- Timer -->
-    <div style="background:${cardBg};border:1px solid ${cardBorder};border-radius:var(--radius2);padding:20px;margin-bottom:12px;transition:all .3s">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <div style="width:8px;height:8px;border-radius:50%;background:${dotColor}"></div>
-        <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:${dotColor}">${statusLabel}</span>
-      </div>
-      <div id="tt-display" style="font-family:IBM Plex Mono,monospace;font-size:56px;font-weight:400;line-height:1;margin-bottom:6px;color:${timerColor};letter-spacing:-.02em">${ttFmt(timerMs)}</div>
-      <div style="font-size:12px;color:var(--text3)">
-        ${ttState==='idle' ? 'Select a project and check in' :
-          ttState==='running' ? '▶ Running — '+ttFmtTime(ttEntries.length ? ttEntries[ttEntries.length-1].startTime : null) :
-          '⏸ Paused — tap Resume to continue'}
-      </div>
-    </div>
-    <!-- Form -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;margin-bottom:12px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Project</div>
-          <select id="tt-project" ${disabled} style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:IBM Plex Sans,sans-serif;font-size:13px;padding:8px 10px;outline:none;cursor:pointer">${projectOpts}</select>
+  return `<div style="display:flex;flex-direction:column;height:100%;min-height:0">
+    <!-- Two-column layout: entries left, timer right -->
+    <div style="display:flex;flex:1;gap:0;min-height:0;overflow:hidden">
+
+      <!-- LEFT: entries + KPI -->
+      <div style="flex:1;overflow-y:auto;border-right:1px solid var(--border)">
+        <!-- KPI strip -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-bottom:1px solid var(--border)">
+          ${[
+            ['Today',    'var(--accent)', ttMinToHhMm(ttEntries.reduce((s,e)=>{const ms=e.endTime?new Date(e.endTime)-new Date(e.startTime)-(e.breakMs||0):0;return s+Math.max(0,ms)},0)/60000)+'h'],
+            ['Entries',  'var(--blue)',   ttEntries.length],
+            ['Status',   ttState==='running'?'var(--green)':ttState==='paused'?'var(--yellow)':'var(--text3)',
+                         ttState==='running'?'● RUN':ttState==='paused'?'⏸ PAUSE':'○ IDLE'],
+          ].map(([l,c,v])=>`<div style="background:var(--bg2);padding:12px 10px;text-align:center">
+            <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:4px">${l}</div>
+            <div style="font-size:18px;font-family:IBM Plex Mono,monospace;font-weight:500;color:${c}">${v}</div>
+          </div>`).join('')}
         </div>
-        <div>
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Activity</div>
-          <select id="tt-tag" ${disabled} style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:IBM Plex Sans,sans-serif;font-size:13px;padding:8px 10px;outline:none;cursor:pointer">${tagOpts}</select>
-        </div>
+        <!-- Entries list -->
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-family:IBM Plex Mono,monospace;padding:10px 16px;border-bottom:1px solid var(--border)">Today's entries</div>
+        ${todayRows}
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${btns}</div>
-    </div>
-    <!-- Today's entries -->
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden">
-      <div style="padding:10px 16px;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-family:IBM Plex Mono,monospace">Today's entries</div>
-      ${entriesHtml}
+
+      <!-- RIGHT: timer panel -->
+      <div style="width:220px;min-width:180px;display:flex;flex-direction:column;background:var(--bg2)">
+        <!-- Timer display -->
+        <div style="padding:20px 16px;background:${cardBg};border-bottom:1px solid ${cardBorder};text-align:center;transition:all .3s">
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:8px">
+            <div style="width:7px;height:7px;border-radius:50%;background:${dotColor}"></div>
+            <span style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:${dotColor}">${statusLabel}</span>
+          </div>
+          <div id="tt-display" style="font-family:IBM Plex Mono,monospace;font-size:42px;font-weight:400;color:${timerColor};line-height:1;letter-spacing:-.02em">${ttFmtBill(timerMs)}</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:6px;font-family:IBM Plex Mono,monospace">billable (10min blocks)</div>
+        </div>
+        <!-- Selectors -->
+        <div style="padding:12px">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:4px">Project</div>
+          <select id="tt-project" ${dis} style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:12px;padding:6px 8px;margin-bottom:10px;outline:none">${projectOpts}</select>
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:4px">Activity</div>
+          <select id="tt-tag" ${dis} style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:12px;padding:6px 8px;outline:none">${tagOpts}</select>
+        </div>
+        <!-- Buttons -->
+        <div style="padding:0 12px 12px">${btns}</div>
+      </div>
     </div>
   </div>`;
 }
@@ -2655,205 +2691,173 @@ function ttRenderClock() {
 // ── HISTORY TAB ──────────────────────────────────────
 function ttRenderHistory() {
   const now = new Date();
-  const y = now.getFullYear(), m = String(now.getMonth()+1).padStart(2,'0');
-  const defaultFrom = `${y}-${m}-01`;
-  const defaultTo   = `${y}-${m}-31`;
+  const y = now.getFullYear(), mo = String(now.getMonth()+1).padStart(2,'0');
 
-  // Group by date
+  const totalMin   = ttHistory.reduce((s,e) => s+(e.totalMin||0), 0);
+  const totalBreak = ttHistory.reduce((s,e) => s+(e.breakMin||0), 0);
+  const days       = new Set(ttHistory.map(e => e.checkin?.slice(0,10))).size;
+
   const byDate = {};
   ttHistory.forEach(e => {
-    const d = e.checkin ? e.checkin.slice(0,10) : 'unknown';
+    const d = (e.checkin||'unknown').slice(0,10);
     if (!byDate[d]) byDate[d] = [];
     byDate[d].push(e);
   });
 
-  // KPIs
-  const totalMin = ttHistory.reduce((s,e) => s + (e.totalMin||0), 0);
-  const totalBreak = ttHistory.reduce((s,e) => s + (e.breakMin||0), 0);
-  const days = Object.keys(byDate).length;
-
-  const kpis = `
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
-      ${[['Total','var(--accent)',ttMinToHhMm(totalMin)+'h'],
-         ['Days','var(--blue)',days],
-         ['Breaks','var(--text3)',ttMinToHhMm(totalBreak)+'h']
-        ].map(([l,c,v]) => `
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:12px;text-align:center;border-top:2px solid ${c}">
-          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:4px">${l}</div>
-          <div style="font-size:24px;font-family:IBM Plex Mono,monospace;font-weight:500;color:${c}">${v}</div>
-        </div>`).join('')}
-    </div>`;
-
-  if (!ttHistoryLoaded) return `<div style="padding:40px;text-align:center;color:var(--text3);font-family:IBM Plex Mono,monospace">Loading history...</div>`;
-
-  const entriesHtml = Object.keys(byDate).sort().reverse().map(date => {
+  const rows = Object.keys(byDate).sort().reverse().map(date => {
     const dayEntries = byDate[date];
-    const dayMin = dayEntries.reduce((s,e) => s + (e.totalMin||0), 0);
-    const rows = dayEntries.map(e => {
-      const tagColor = e.tag && e.tag.includes('501') ? 'var(--green)' :
-                       e.tag && e.tag.includes('900') ? 'var(--blue)' :
-                       e.tag && e.tag.includes('750') ? 'var(--purple)' : 'var(--text2)';
-      return `<div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);gap:12px">
+    const dayMin = dayEntries.reduce((s,e) => s+(e.totalMin||0), 0);
+    const entryRows = dayEntries.map(e => `
+      <div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:500;color:${tagColor};font-family:IBM Plex Mono,monospace;margin-bottom:1px">${e.tag||'—'}</div>
-          <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.project||e.person||'—'}</div>
+          <div style="font-size:11px;font-weight:600;color:var(--accent);font-family:IBM Plex Mono,monospace">${e.tag||'—'}</div>
+          <div style="font-size:12px;color:var(--text2)">${e.project||e.person||'—'}</div>
         </div>
-        <div style="text-align:right;flex-shrink:0">
+        <div style="text-align:right;flex-shrink:0;margin-right:8px">
           <div style="font-size:12px;font-family:IBM Plex Mono,monospace;color:var(--text)">${ttFmtTime(e.checkin)} – ${ttFmtTime(e.checkout)}</div>
-          <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--text3)">${ttMinToHhMm(e.totalMin)}h${e.breakMin?' · ⏸'+e.breakMin+'min':''}</div>
+          <div style="font-size:18px;font-family:IBM Plex Mono,monospace;font-weight:500;color:var(--accent)">${ttMinToHhMm(e.totalMin||0)}h</div>
+          ${e.breakMin ? `<div style="font-size:10px;color:var(--text3)">⏸ ${e.breakMin}min break</div>` : ''}
         </div>
-      </div>`;
-    }).join('');
-
+        <button onclick="ttOpenEdit(${JSON.stringify(e).replace(/"/g,'&quot;')})" 
+          style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:6px 8px;cursor:pointer;color:var(--text3);flex-shrink:0" title="Edit">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px"><path d="M9 2l3 3-7 7H2v-3z"/></svg>
+        </button>
+      </div>`).join('');
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden;margin-bottom:10px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border)">
-        <span style="font-size:12px;font-weight:500;color:var(--text);font-family:IBM Plex Mono,monospace">${new Date(date).toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit'})}</span>
-        <span style="font-size:12px;font-family:IBM Plex Mono,monospace;color:var(--accent)">${ttMinToHhMm(dayMin)}h</span>
+        <span style="font-size:12px;font-weight:500;color:var(--text);font-family:IBM Plex Mono,monospace">${new Date(date+'T12:00:00').toLocaleDateString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'})}</span>
+        <span style="font-size:18px;font-family:IBM Plex Mono,monospace;font-weight:500;color:var(--accent)">${ttMinToHhMm(dayMin)}h</span>
       </div>
-      ${rows}
+      ${entryRows}
     </div>`;
   }).join('');
 
-  return `<div style="max-width:520px;margin:0 auto;padding:16px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div style="font-size:13px;font-weight:500;color:var(--text)">History</div>
-      <div style="display:flex;gap:8px">
-        <input type="month" id="tt-month-filter" value="${y}-${m}"
-          style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:IBM Plex Sans,sans-serif;font-size:12px;padding:5px 8px;outline:none;cursor:pointer"
-          onchange="ttFilterMonth(this.value)">
-      </div>
+  return `<div style="max-width:680px;margin:0 auto;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <span style="font-size:13px;font-weight:500;color:var(--text)">History</span>
+      <input type="month" id="tt-month-filter" value="${y}-${mo}"
+        style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:12px;padding:5px 8px;outline:none;cursor:pointer"
+        onchange="ttFilterMonth(this.value)">
     </div>
-    ${kpis}
-    ${ttHistory.length === 0
-      ? '<div style="padding:40px;text-align:center;color:var(--text3);font-family:IBM Plex Mono,monospace">No entries found for this period</div>'
-      : entriesHtml}
+    <!-- KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+      ${[['Total hours','var(--accent)',ttMinToHhMm(totalMin)+'h'],
+         ['Working days','var(--blue)',days+' days'],
+         ['Total breaks','var(--text3)',ttMinToHhMm(totalBreak)+'h']
+        ].map(([l,c,v])=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:12px;text-align:center;border-top:2px solid ${c}">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:4px">${l}</div>
+          <div style="font-size:24px;font-family:IBM Plex Mono,monospace;font-weight:500;color:${c}">${v}</div>
+        </div>`).join('')}
+    </div>
+    ${!ttHistoryLoaded ? '<div style="padding:40px;text-align:center;color:var(--text3);font-family:IBM Plex Mono,monospace">Loading...</div>'
+      : ttHistory.length === 0 ? '<div style="padding:40px;text-align:center;color:var(--text3);font-family:IBM Plex Mono,monospace">No entries for this period</div>'
+      : rows}
   </div>`;
 }
 
 async function ttFilterMonth(val) {
-  const [y, m] = val.split('-');
+  const [y,m] = val.split('-');
   ttHistoryLoaded = false;
-  await ttLoadHistory(`${y}-${m}-01`, `${y}-${m}-31`);
+  await ttLoadHistory(`${y}-${m}-01`,`${y}-${m}-31`);
   renderTimeTracker();
 }
 
 // ── CALENDAR TAB ─────────────────────────────────────
 function ttRenderCalendar() {
-  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const today = new Date();
-  const firstDay = new Date(ttCalYear, ttCalMonth, 1).getDay();
-  const daysInMonth = new Date(ttCalYear, ttCalMonth+1, 0).getDate();
-  const startDay = firstDay === 0 ? 6 : firstDay-1;
+  const firstDay = new Date(ttCalYear,ttCalMonth,1).getDay();
+  const daysInMonth = new Date(ttCalYear,ttCalMonth+1,0).getDate();
+  const startDay = firstDay===0?6:firstDay-1;
 
-  // Build day map from history
   const byDay = {};
   ttHistory.forEach(e => {
     if (!e.checkin) return;
     const d = new Date(e.checkin);
-    if (d.getFullYear() === ttCalYear && d.getMonth() === ttCalMonth) {
+    if (d.getFullYear()===ttCalYear && d.getMonth()===ttCalMonth) {
       const day = d.getDate();
-      if (!byDay[day]) byDay[day] = { min: 0, entries: [] };
-      byDay[day].min += e.totalMin || 0;
+      if (!byDay[day]) byDay[day]={min:0,entries:[]};
+      byDay[day].min += e.totalMin||0;
       byDay[day].entries.push(e);
     }
   });
 
-  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  let grid = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden">`;
-
-  days.forEach(d => {
-    grid += `<div style="background:var(--bg3);padding:6px;text-align:center;font-size:10px;font-family:IBM Plex Mono,monospace;color:var(--text3);text-transform:uppercase;letter-spacing:.06em">${d}</div>`;
+  const weeks={};
+  Object.entries(byDay).forEach(([day,data])=>{
+    const d=parseInt(day), w=Math.ceil((startDay+d)/7);
+    if(!weeks[w]) weeks[w]=0;
+    weeks[w]+=data.min;
   });
 
-  for (let i = 0; i < startDay; i++) {
-    grid += `<div style="background:var(--bg);min-height:70px"></div>`;
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    const isToday = d === today.getDate() && ttCalMonth === today.getMonth() && ttCalYear === today.getFullYear();
-    const dayData = byDay[d];
-    const h = dayData ? ttMinToHhMm(dayData.min) : '';
-    const isWeekend = ((startDay + d - 1) % 7) >= 5;
-
-    grid += `<div style="background:${isToday?'var(--blue-bg)':isWeekend?'var(--bg3)':'var(--bg2)'};min-height:70px;padding:6px;border-top:${isToday?'2px solid var(--accent)':'1px solid transparent'}">
-      <div style="font-size:12px;font-family:IBM Plex Mono,monospace;color:${isToday?'var(--accent)':'var(--text2)'};font-weight:${isToday?'600':'400'};margin-bottom:4px">${d}</div>
-      ${dayData ? `<div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--green);font-weight:500">${h}h</div>
-        ${dayData.entries.slice(0,2).map(e => `<div style="font-size:9px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${e.tag||''}</div>`).join('')}
-        ${dayData.entries.length > 2 ? `<div style="font-size:9px;color:var(--text3)">+${dayData.entries.length-2}</div>` : ''}` : ''}
+  const dayHeaders=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let grid=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius2);overflow:hidden">`;
+  dayHeaders.forEach(d=>{grid+=`<div style="background:var(--bg3);padding:6px;text-align:center;font-size:10px;font-family:IBM Plex Mono,monospace;color:var(--text3)">${d}</div>`;});
+  for(let i=0;i<startDay;i++) grid+=`<div style="background:var(--bg);min-height:64px"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const isToday=d===today.getDate()&&ttCalMonth===today.getMonth()&&ttCalYear===today.getFullYear();
+    const isWeekend=((startDay+d-1)%7)>=5;
+    const dd=byDay[d];
+    grid+=`<div style="background:${isToday?'var(--blue-bg)':isWeekend?'var(--bg3)':'var(--bg2)'};min-height:64px;padding:5px;border-top:${isToday?'2px solid var(--accent)':'1px solid transparent'}">
+      <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:${isToday?'var(--accent)':'var(--text2)'};font-weight:${isToday?'600':'400'}">${d}</div>
+      ${dd?`<div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--green);font-weight:500;margin-top:2px">${ttMinToHhMm(dd.min)}h</div>
+        ${dd.entries.slice(0,1).map(e=>`<div style="font-size:9px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.tag||''}</div>`).join('')}`:''}
     </div>`;
   }
-  grid += `</div>`;
+  grid+=`</div>`;
 
-  // Weekly totals bar
-  const weeks = {};
-  Object.entries(byDay).forEach(([day, data]) => {
-    const d = parseInt(day);
-    const weekNum = Math.ceil((startDay + d) / 7);
-    if (!weeks[weekNum]) weeks[weekNum] = 0;
-    weeks[weekNum] += data.min;
-  });
-
-  const weekBars = Object.entries(weeks).map(([w, min]) => {
-    const pct = Math.min(100, Math.round(min / (40*60) * 100));
+  const weekBars=Object.entries(weeks).map(([w,min])=>{
+    const pct=Math.min(100,Math.round(min/(40*60)*100));
     return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-      <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--text3);width:32px">Wk${w}</div>
+      <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--text3);width:28px">W${w}</div>
       <div style="flex:1;height:10px;background:var(--bg3);border-radius:5px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:var(--accent);border-radius:5px;transition:width .6s"></div>
+        <div style="height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--accent)'};border-radius:5px"></div>
       </div>
-      <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--accent);width:36px;text-align:right">${ttMinToHhMm(min)}h</div>
+      <div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--accent);width:40px;text-align:right">${ttMinToHhMm(min)}h</div>
     </div>`;
   }).join('');
 
-  return `<div style="max-width:520px;margin:0 auto;padding:16px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-      <button onclick="ttCalNav(-1)" class="btn" style="padding:6px 10px;font-size:13px">←</button>
+  return `<div style="max-width:680px;margin:0 auto;padding:16px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <button onclick="ttCalNav(-1)" class="btn" style="padding:5px 10px">←</button>
       <span style="flex:1;text-align:center;font-family:IBM Plex Mono,monospace;font-size:14px;font-weight:500;color:var(--text)">${monthNames[ttCalMonth]} ${ttCalYear}</span>
-      <button onclick="ttCalNav(1)" class="btn" style="padding:6px 10px;font-size:13px">→</button>
+      <button onclick="ttCalNav(1)" class="btn" style="padding:5px 10px">→</button>
     </div>
     ${grid}
-    ${weekBars ? `<div style="margin-top:16px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:12px">Weekly hours (vs 40h target)</div>
+    ${weekBars?`<div style="margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:12px">Weekly hours vs 40h target</div>
       ${weekBars}
-    </div>` : ''}
+    </div>`:''}
   </div>`;
 }
 
 function ttCalNav(dir) {
-  ttCalMonth += dir;
-  if (ttCalMonth > 11) { ttCalMonth = 0; ttCalYear++; }
-  if (ttCalMonth < 0) { ttCalMonth = 11; ttCalYear--; }
-  const mo = String(ttCalMonth+1).padStart(2,'0');
-  ttHistoryLoaded = false;
-  ttLoadHistory(`${ttCalYear}-${mo}-01`, `${ttCalYear}-${mo}-31`).then(() => renderTimeTracker());
+  ttCalMonth+=dir;
+  if(ttCalMonth>11){ttCalMonth=0;ttCalYear++;}
+  if(ttCalMonth<0){ttCalMonth=11;ttCalYear--;}
+  const mo=String(ttCalMonth+1).padStart(2,'0');
+  ttHistoryLoaded=false;
+  ttLoadHistory(`${ttCalYear}-${mo}-01`,`${ttCalYear}-${mo}-31`).then(()=>renderTimeTracker());
 }
 
 // ── SUMMARY TAB ──────────────────────────────────────
 function ttRenderSummaryTT() {
   if (!ttHistoryLoaded) return `<div style="padding:40px;text-align:center;color:var(--text3);font-family:IBM Plex Mono,monospace">Loading...</div>`;
-
-  const totalMin = ttHistory.reduce((s,e) => s + (e.totalMin||0), 0);
-  const totalBreak = ttHistory.reduce((s,e) => s + (e.breakMin||0), 0);
-  const days = new Set(ttHistory.map(e => e.checkin?.slice(0,10))).size;
-  const avgMin = days > 0 ? Math.round(totalMin / days) : 0;
-
-  // By project
-  const byProj = {};
-  ttHistory.forEach(e => {
-    const k = e.project || e.person || '—';
-    byProj[k] = (byProj[k] || 0) + (e.totalMin||0);
+  const now = new Date();
+  const y = now.getFullYear(), mo = String(now.getMonth()+1).padStart(2,'0');
+  const totalMin=ttHistory.reduce((s,e)=>s+(e.totalMin||0),0);
+  const totalBreak=ttHistory.reduce((s,e)=>s+(e.breakMin||0),0);
+  const days=new Set(ttHistory.map(e=>e.checkin?.slice(0,10))).size;
+  const avgMin=days>0?Math.round(totalMin/days):0;
+  const byProj={}, byTag={};
+  ttHistory.forEach(e=>{
+    const k=e.project||'—'; byProj[k]=(byProj[k]||0)+(e.totalMin||0);
+    const t=e.tag||'—'; byTag[t]=(byTag[t]||0)+(e.totalMin||0);
   });
-  // By tag/activity
-  const byTag = {};
-  ttHistory.forEach(e => {
-    const k = e.tag || '—';
-    byTag[k] = (byTag[k] || 0) + (e.totalMin||0);
-  });
-
-  function ttBar(label, min, maxMin, color) {
-    const pct = maxMin > 0 ? Math.round(min/maxMin*100) : 0;
+  function ttBar(label,min,maxMin,color){
+    const pct=maxMin>0?Math.round(min/maxMin*100):0;
     return `<div style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
-        <span style="font-size:13px;color:var(--text2)">${label}</span>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+        <span style="font-size:12px;color:var(--text2)">${label}</span>
         <span style="font-size:20px;font-family:IBM Plex Mono,monospace;font-weight:500;color:${color}">${ttMinToHhMm(min)}h</span>
       </div>
       <div style="height:12px;background:var(--bg3);border-radius:6px;overflow:hidden;border:1px solid var(--border)">
@@ -2861,47 +2865,34 @@ function ttRenderSummaryTT() {
       </div>
     </div>`;
   }
-
-  const projMax = Math.max(...Object.values(byProj), 1);
-  const tagMax = Math.max(...Object.values(byTag), 1);
-  const projBars = Object.entries(byProj).sort((a,b)=>b[1]-a[1]).map(([k,v]) => ttBar(k,v,projMax,'var(--accent)')).join('');
-  const tagBars = Object.entries(byTag).sort((a,b)=>b[1]-a[1]).map(([k,v]) => ttBar(k,v,tagMax,'var(--blue)')).join('');
-
-  const now = new Date();
-  const y = now.getFullYear(), mo = String(now.getMonth()+1).padStart(2,'0');
-
-  return `<div style="max-width:520px;margin:0 auto;padding:16px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+  const projMax=Math.max(...Object.values(byProj),1);
+  const tagMax=Math.max(...Object.values(byTag),1);
+  return `<div style="max-width:680px;margin:0 auto;padding:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
       <span style="font-size:13px;font-weight:500;color:var(--text)">Monthly Summary</span>
-      <input type="month" value="${y}-${mo}"
-        style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:IBM Plex Sans,sans-serif;font-size:12px;padding:5px 8px;outline:none"
-        onchange="ttFilterMonth(this.value)">
+      <input type="month" value="${y}-${mo}" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:12px;padding:5px 8px;outline:none" onchange="ttFilterMonth(this.value)">
     </div>
-    <!-- KPI cards -->
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px">
-      ${[
-        ['Total hours','var(--accent)',ttMinToHhMm(totalMin)+'h'],
-        ['Working days','var(--blue)',days+' days'],
-        ['Avg / day','var(--green)',ttMinToHhMm(avgMin)+'h'],
-        ['Total breaks','var(--text3)',ttMinToHhMm(totalBreak)+'h'],
-      ].map(([l,c,v]) => `
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px;position:relative;overflow:hidden">
+      ${[['Total hours','var(--accent)',ttMinToHhMm(totalMin)+'h'],
+         ['Working days','var(--blue)',days+' days'],
+         ['Avg / day','var(--green)',ttMinToHhMm(avgMin)+'h'],
+         ['Total breaks','var(--text3)',ttMinToHhMm(totalBreak)+'h'],
+        ].map(([l,c,v])=>`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:14px;position:relative;overflow:hidden">
           <div style="position:absolute;top:0;left:0;right:0;height:2px;background:${c}"></div>
           <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">${l}</div>
-          <div style="font-size:32px;font-family:IBM Plex Mono,monospace;font-weight:500;color:${c};line-height:1">${v}</div>
+          <div style="font-size:28px;font-family:IBM Plex Mono,monospace;font-weight:500;color:${c};line-height:1">${v}</div>
         </div>`).join('')}
     </div>
-    <!-- Charts -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:16px;display:flex;align-items:center;gap:6px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:14px;display:flex;align-items:center;gap:6px">
           <span style="width:3px;height:14px;background:var(--accent);border-radius:2px;display:inline-block"></span>By project</div>
-        ${projBars || '<div style="color:var(--text3);font-size:12px">No data</div>'}
+        ${Object.entries(byProj).sort((a,b)=>b[1]-a[1]).map(([k,v])=>ttBar(k,v,projMax,'var(--accent)')).join('')||'<div style="color:var(--text3);font-size:12px">No data</div>'}
       </div>
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius2);padding:16px">
-        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:16px;display:flex;align-items:center;gap:6px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:14px;display:flex;align-items:center;gap:6px">
           <span style="width:3px;height:14px;background:var(--blue);border-radius:2px;display:inline-block"></span>By activity</div>
-        ${tagBars || '<div style="color:var(--text3);font-size:12px">No data</div>'}
+        ${Object.entries(byTag).sort((a,b)=>b[1]-a[1]).map(([k,v])=>ttBar(k,v,tagMax,'var(--blue)')).join('')||'<div style="color:var(--text3);font-size:12px">No data</div>'}
       </div>
     </div>
   </div>`;
@@ -2911,66 +2902,206 @@ function ttRenderSummaryTT() {
 async function ttCheckin() {
   const res = await ttCall('checkin');
   if (res.ok) {
-    ttStart = Date.now(); ttPausedMs = 0;
-    const proj = document.getElementById('tt-project');
-    const tag  = document.getElementById('tt-tag');
-    ttEntries.push({ project: proj?.value||'', tag: tag?.value||'', startTime: new Date().toISOString(), endTime: null, status: 'active', breakMs: 0 });
-    ttState = 'running';
-    showToast('Checked in ✓');
-    renderTimeTracker();
-  } else if (res.status === 409) {
-    showToast(res.data.error || 'Already checked in', true);
-  } else {
-    showToast('Connection error', true);
-  }
+    ttStart=Date.now(); ttPausedMs=0;
+    const proj=document.getElementById('tt-project');
+    const tag=document.getElementById('tt-tag');
+    ttEntries.push({project:proj?.value||'',tag:tag?.value||'',startTime:new Date().toISOString(),endTime:null,status:'active',breakMs:0});
+    ttState='running'; ttSaveState(); showToast('Checked in ✓'); renderTimeTracker();
+  } else if (res.status===409) { showToast(res.data.error||'Already checked in',true);
+  } else { showToast('Connection error',true); }
 }
 async function ttPause() {
-  const res = await ttCall('pause');
-  if (res.ok) {
-    ttPauseStart = Date.now();
-    const e = ttEntries[ttEntries.length-1]; if (e) e.status = 'paused';
-    ttState = 'paused'; showToast('Paused'); renderTimeTracker();
-  } else { showToast('Connection error', true); }
+  const res=await ttCall('pause');
+  if(res.ok){
+    ttPauseStart=Date.now();
+    const e=ttEntries[ttEntries.length-1]; if(e) e.status='paused';
+    ttState='paused'; ttSaveState(); showToast('Paused'); renderTimeTracker();
+  } else { showToast('Connection error',true); }
 }
 async function ttResume() {
-  const res = await ttCall('resume');
-  if (res.ok) {
-    const dur = Date.now() - ttPauseStart; ttPausedMs += dur;
-    const e = ttEntries[ttEntries.length-1];
-    if (e) { e.breakMs = (e.breakMs||0)+dur; e.status = 'active'; }
-    ttState = 'running'; showToast('Resumed'); renderTimeTracker();
-  } else { showToast('Connection error', true); }
+  const res=await ttCall('resume');
+  if(res.ok){
+    const dur=Date.now()-ttPauseStart; ttPausedMs+=dur;
+    const e=ttEntries[ttEntries.length-1];
+    if(e){e.breakMs=(e.breakMs||0)+dur; e.status='active';}
+    ttState='running'; ttSaveState(); showToast('Resumed'); renderTimeTracker();
+  } else { showToast('Connection error',true); }
 }
 async function ttCheckout() {
-  const res = await ttCall('checkout');
-  if (res.ok) {
-    const e = ttEntries[ttEntries.length-1];
-    if (e) { e.endTime = new Date().toISOString(); e.status = 'done'; }
-    if (ttInterval) { clearInterval(ttInterval); ttInterval = null; }
-    ttState = 'idle'; ttStart = null; ttPausedMs = 0;
-    ttHistoryLoaded = false;
+  const res=await ttCall('checkout');
+  if(res.ok){
+    const e=ttEntries[ttEntries.length-1];
+    if(e){e.endTime=new Date().toISOString(); e.status='done';}
+    if(ttInterval){clearInterval(ttInterval);ttInterval=null;}
+    ttState='idle'; ttStart=null; ttPausedMs=0;
+    ttHistoryLoaded=false; ttClearState();
     showToast('Checked out ✓'); renderTimeTracker();
-  } else { showToast('Connection error', true); }
+  } else { showToast('Connection error',true); }
 }
 async function ttNewEntry() {
-  const res = await ttCall('checkout');
-  if (res.ok) {
-    const e = ttEntries[ttEntries.length-1];
-    if (e) { e.endTime = new Date().toISOString(); e.status = 'done'; }
-    ttState = 'idle';
-    setTimeout(async () => {
-      const res2 = await ttCall('checkin');
-      if (res2.ok) {
-        ttStart = Date.now(); ttPausedMs = 0;
-        const proj = document.getElementById('tt-project');
-        const tag  = document.getElementById('tt-tag');
-        ttEntries.push({ project: proj?.value||'', tag: tag?.value||'', startTime: new Date().toISOString(), endTime: null, status: 'active', breakMs: 0 });
-        ttState = 'running'; showToast('New entry started ✓'); renderTimeTracker();
-      } else { showToast('Connection error', true); }
-    }, 500);
-  } else { showToast('Connection error', true); }
+  const res=await ttCall('checkout');
+  if(res.ok){
+    const e=ttEntries[ttEntries.length-1];
+    if(e){e.endTime=new Date().toISOString(); e.status='done';}
+    ttState='idle';
+    setTimeout(async()=>{
+      const res2=await ttCall('checkin');
+      if(res2.ok){
+        ttStart=Date.now(); ttPausedMs=0;
+        const proj=document.getElementById('tt-project');
+        const tag=document.getElementById('tt-tag');
+        ttEntries.push({project:proj?.value||'',tag:tag?.value||'',startTime:new Date().toISOString(),endTime:null,status:'active',breakMs:0});
+        ttState='running'; ttSaveState(); showToast('New entry started ✓'); renderTimeTracker();
+      } else { showToast('Connection error',true); }
+    },500);
+  } else { showToast('Connection error',true); }
 }
 
-// Load status on init when time view is opened
-const _origRenderTT = renderTimeTracker;
+// ── EDIT ENTRY MODAL ─────────────────────────────────
+function ttOpenEdit(entry) {
+  ttEditEntry = entry;
+  const projectOpts = TT_PROJECTS.map(p=>`<option value="${p}" ${entry.project===p?'selected':''}>${p}</option>`).join('');
+  const tagOpts = TT_TAGS.map(t=>`<option value="${t}" ${entry.tag===t?'selected':''}>${t}</option>`).join('');
+  const overlay = document.createElement('div');
+  overlay.id = 'tt-edit-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius2);width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <span style="font-family:IBM Plex Mono,monospace;font-size:13px;font-weight:500;color:var(--text)">// edit_entry</span>
+        <div onclick="ttCloseEdit()" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2)">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px"><path d="M2 2l10 10M12 2L2 12"/></svg>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Check-in</label>
+          <input type="datetime-local" id="tt-edit-checkin" value="${ttIsoToInput(entry.checkin)}"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Check-out</label>
+          <input type="datetime-local" id="tt-edit-checkout" value="${ttIsoToInput(entry.checkout)}"
+            style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Break (minutes)</label>
+        <input type="number" id="tt-edit-break" value="${entry.breakMin||0}" min="0" step="5"
+          style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Activity</label>
+        <select id="tt-edit-tag" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">${tagOpts}</select>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border)">
+        <button onclick="ttCloseEdit()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2)">Cancel</button>
+        <button onclick="ttSaveEdit()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer">Save changes</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function ttCloseEdit() {
+  const o=document.getElementById('tt-edit-overlay'); if(o) o.remove();
+}
+
+async function ttSaveEdit() {
+  const checkin  = document.getElementById('tt-edit-checkin').value;
+  const checkout = document.getElementById('tt-edit-checkout').value;
+  const breakMin = parseInt(document.getElementById('tt-edit-break').value)||0;
+  const tag      = document.getElementById('tt-edit-tag').value;
+  if (!ttEditEntry?.pageId) { showToast('No page ID — cannot save',true); return; }
+  const btn = document.querySelector('#tt-edit-overlay button[onclick="ttSaveEdit()"]');
+  if(btn){btn.textContent='Saving...';btn.disabled=true;}
+  try {
+    const r = await fetch(TT_WEBHOOKS.timeUpdate, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ pageId:ttEditEntry.pageId, checkin:checkin?new Date(checkin).toISOString():undefined, checkout:checkout?new Date(checkout).toISOString():undefined, breakMin, tag })
+    });
+    const data = await r.json().catch(()=>({}));
+    if(r.ok){
+      ttCloseEdit(); ttHistoryLoaded=false;
+      await ttLoadHistory(); renderTimeTracker();
+      showToast('Entry updated ✓');
+    } else { showToast('Save failed: '+(data.error||r.status),true); }
+  } catch(e){ showToast('Connection error',true); }
+}
+
+// ── MANUAL ENTRY MODAL ───────────────────────────────
+function ttOpenManual() {
+  const now = new Date();
+  const pad = n=>String(n).padStart(2,'0');
+  const todayStart = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T08:00`;
+  const todayEnd   = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T17:00`;
+  const projectOpts = TT_PROJECTS.map(p=>`<option value="${p}">${p}</option>`).join('');
+  const tagOpts = TT_TAGS.map(t=>`<option value="${t}">${t}</option>`).join('');
+  const overlay = document.createElement('div');
+  overlay.id = 'tt-manual-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:500;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius2);width:480px;max-width:95vw;padding:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <span style="font-family:IBM Plex Mono,monospace;font-size:13px;font-weight:500;color:var(--text)">// add_manual_entry</span>
+        <div onclick="document.getElementById('tt-manual-overlay').remove()" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:14px;height:14px"><path d="M2 2l10 10M12 2L2 12"/></svg>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Check-in *</label>
+          <input type="datetime-local" id="tt-man-checkin" value="${todayStart}" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Check-out *</label>
+          <input type="datetime-local" id="tt-man-checkout" value="${todayEnd}" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Project</label>
+          <select id="tt-man-project" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">${projectOpts}</select>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Activity</label>
+          <select id="tt-man-tag" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">${tagOpts}</select>
+        </div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Break (minutes)</label>
+        <input type="number" id="tt-man-break" value="60" min="0" step="5" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border)">
+        <button onclick="document.getElementById('tt-manual-overlay').remove()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2)">Cancel</button>
+        <button onclick="ttSaveManual()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer">Add entry</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function ttSaveManual() {
+  const checkin  = document.getElementById('tt-man-checkin').value;
+  const checkout = document.getElementById('tt-man-checkout').value;
+  const project  = document.getElementById('tt-man-project').value;
+  const tag      = document.getElementById('tt-man-tag').value;
+  const breakMin = parseInt(document.getElementById('tt-man-break').value)||0;
+  if (!checkin||!checkout) { showToast('Check-in and check-out required',true); return; }
+  const btn=document.querySelector('#tt-manual-overlay button[onclick="ttSaveManual()"]');
+  if(btn){btn.textContent='Saving...';btn.disabled=true;}
+  try {
+    const r=await fetch(TT_WEBHOOKS.checkin,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ person:config.username, project, tag, timestamp:new Date(checkin).toISOString(), checkout:new Date(checkout).toISOString(), breakMin, manual:true })
+    });
+    if(r.ok){
+      document.getElementById('tt-manual-overlay')?.remove();
+      ttHistoryLoaded=false;
+      showToast('Entry added ✓');
+      renderTimeTracker();
+    } else { showToast('Save failed',true); }
+  } catch(e){ showToast('Connection error',true); }
+}
+
+// ── INIT ─────────────────────────────────────────────
+ttRestoreState();
 </script>
