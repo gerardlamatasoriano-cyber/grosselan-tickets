@@ -2488,11 +2488,13 @@ async function ttCall(action, extra) {
   const proj = document.getElementById('tt-project');
   const tag  = document.getElementById('tt-tag');
   const notesInput = document.getElementById('tt-notes');
+  const nummerInput = document.getElementById('tt-nummer');
   const payload = Object.assign({
     person: config.username,
     project: proj ? proj.value : '',
     tag: tag ? tag.value : '',
     notes: notesInput ? notesInput.value.trim() : '',
+    nummer: nummerInput ? nummerInput.value.trim() : '',
     timestamp: ttNow()
   }, extra || {});
   try {
@@ -2610,9 +2612,15 @@ function ttRenderClock() {
   // Action buttons
   let btns = '';
   if (ttState === 'idle') {
-    btns = `<div style="margin-bottom:8px">
-      <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:5px">Description (optional)</div>
-      <input id="tt-notes" type="text" placeholder="e.g. I/O testing, documentation..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:IBM Plex Sans,sans-serif;font-size:13px;padding:8px 10px;outline:none">
+    btns = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:5px">Project Nr. (optional)</div>
+        <input id="tt-nummer" type="text" placeholder="P 250129" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:IBM Plex Mono,monospace;font-size:13px;padding:8px 10px;outline:none">
+      </div>
+      <div>
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:5px">Description (optional)</div>
+        <input id="tt-notes" type="text" placeholder="e.g. I/O testing..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:IBM Plex Sans,sans-serif;font-size:13px;padding:8px 10px;outline:none">
+      </div>
     </div>
     <button onclick="ttCheckin()" style="width:100%;background:var(--green);color:#fff;border:none;border-radius:var(--radius2);padding:14px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:IBM Plex Sans,sans-serif">
       <svg viewBox="0 0 20 20" fill="currentColor" style="width:18px;height:18px"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.5"/><polygon points="8,7 14,10 8,13"/></svg>Check in</button>`;
@@ -2651,7 +2659,13 @@ function ttRenderClock() {
         const billColor = isActive ? 'var(--green)' : 'var(--accent)';
         return `<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:10px">
           <div style="flex:1;min-width:0">
-            <div style="font-size:11px;font-weight:600;color:var(--accent);font-family:IBM Plex Mono,monospace;margin-bottom:2px">${e.tag||'—'}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <div style="display:flex;align-items:center;gap:6px">
+            <div style="font-size:11px;font-weight:600;color:var(--accent);font-family:IBM Plex Mono,monospace">${e.tag||'—'}</div>
+            ${e.nummer ? `<div style="font-size:10px;color:var(--text3);font-family:IBM Plex Mono,monospace;background:var(--bg3);padding:1px 5px;border-radius:3px;border:1px solid var(--border)">${e.nummer}</div>` : ''}
+          </div>
+              ${e.nummer ? `<div style="font-size:10px;color:var(--text3);font-family:IBM Plex Mono,monospace;background:var(--bg3);padding:1px 5px;border-radius:3px;border:1px solid var(--border)">${e.nummer}</div>` : ''}
+            </div>
             <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.project||'—'}</div>
             ${e.notes ? `<div style="font-size:11px;color:var(--text3);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.notes}</div>` : ''}
             <div style="font-size:11px;color:var(--text3);font-family:IBM Plex Mono,monospace">${ttFmtTime(e.startTime)}${e.endTime?' – '+ttFmtTime(e.endTime):' – now'}</div>
@@ -2735,7 +2749,10 @@ function ttRenderHistory() {
     const entryRows = dayEntries.map(e => `
       <div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);gap:10px">
         <div style="flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:600;color:var(--accent);font-family:IBM Plex Mono,monospace">${e.tag||'—'}</div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="font-size:11px;font-weight:600;color:var(--accent);font-family:IBM Plex Mono,monospace">${e.tag||'—'}</div>
+            ${e.nummer ? `<div style="font-size:10px;color:var(--text3);font-family:IBM Plex Mono,monospace;background:var(--bg3);padding:1px 5px;border-radius:3px;border:1px solid var(--border)">${e.nummer}</div>` : ''}
+          </div>
           <div style="font-size:12px;color:var(--text2)">${e.project||e.person||'—'}</div>
           ${e.notes ? `<div style="font-size:11px;color:var(--text3);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px">${e.notes}</div>` : ''}
         </div>
@@ -2767,9 +2784,14 @@ function ttRenderHistory() {
   return `<div style="padding:16px 24px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <span style="font-size:13px;font-weight:500;color:var(--text)">History</span>
-      <input type="month" id="tt-month-filter" value="${y}-${mo}"
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="ttExportPDF()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:IBM Plex Sans,sans-serif">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" style="width:12px;height:12px"><path d="M2 10h10M7 2v6M4 6l3 3 3-3"/></svg>Export PDF
+        </button>
+        <input type="month" id="tt-month-filter" value="${y}-${mo}"
         style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-size:12px;padding:5px 8px;outline:none;cursor:pointer"
         onchange="ttFilterMonth(this.value)">
+      </div>
     </div>
     <!-- KPIs -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
@@ -3147,6 +3169,16 @@ function ttOpenEdit(entry) {
         <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description</label>
         <input type="text" id="tt-edit-notes" value="${entry.notes||''}" placeholder="e.g. I/O testing, documentation..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Project Nr.</label>
+          <input type="text" id="tt-edit-nummer" value="${entry.nummer||''}" placeholder="P 250129" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:13px;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description</label>
+          <input type="text" id="tt-edit-notes" value="${entry.notes||''}" placeholder="e.g. I/O testing..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+        </div>
+      </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border)">
         <button onclick="ttCloseEdit()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2)">Cancel</button>
         <button onclick="ttSaveEdit()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer">Save changes</button>
@@ -3170,7 +3202,9 @@ async function ttSaveEdit() {
   if(btn){btn.textContent='Saving...';btn.disabled=true;}
   try {
     const editNotes = document.getElementById('tt-edit-notes')?.value.trim();
-    const body = { pageId:ttEditEntry.pageId, breakMin, tag };
+    const editNummer = document.getElementById('tt-edit-nummer')?.value.trim()||'';
+    const editNotes2 = document.getElementById('tt-edit-notes')?.value.trim()||'';
+    const body = { pageId:ttEditEntry.pageId, breakMin, tag, nummer:editNummer, notes:editNotes2 };
     if (checkin) body.checkin = new Date(checkin).toISOString();
     if (checkout) body.checkout = new Date(checkout).toISOString();
     if (project) body.project = project;
@@ -3231,6 +3265,16 @@ function ttOpenManual() {
         <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Break (minutes)</label>
         <input type="number" id="tt-man-break" value="60" min="0" step="5" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Project Nr. (optional)</label>
+          <input type="text" id="tt-man-nummer" placeholder="P 250129" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:13px;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description (optional)</label>
+          <input type="text" id="tt-man-notes" placeholder="e.g. I/O testing..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+        </div>
+      </div>
       <div style="margin-bottom:14px">
         <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description (optional)</label>
         <input type="text" id="tt-man-notes" placeholder="e.g. I/O testing, KA Steinenbronn..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
@@ -3263,7 +3307,8 @@ async function ttSaveManual() {
         checkin:  new Date(checkin).toISOString(),
         checkout: new Date(checkout).toISOString(),
         breakMin,
-        notes: document.getElementById('tt-man-notes')?.value.trim() || ''
+        notes: document.getElementById('tt-man-notes')?.value.trim() || '',
+        nummer: document.getElementById('tt-man-nummer')?.value.trim() || ''
       })
     });
     const data = await r.json().catch(()=>({}));
@@ -3285,6 +3330,39 @@ async function ttSaveManual() {
   }
 }
 
+
+// ── EXPORT PDF ────────────────────────────────────────
+function ttGetKW(dateStr) {
+  const d=new Date(dateStr+'T12:00:00'),jan1=new Date(d.getFullYear(),0,1);
+  return Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
+}
+function ttFmtMinDur(min){if(!min&&min!==0)return '';const h=Math.floor(min/60),m=min%60;return h+':'+String(m).padStart(2,'0');}
+
+function ttExportPDF() {
+  if(!ttHistory.length){showToast('No entries to export',true);return;}
+  const person=config.username;
+  const totalMin=ttHistory.reduce((s,e)=>s+(e.totalMin||0),0);
+  const totalH=Math.floor(totalMin/60),totalM=totalMin%60;
+  const overMin=totalMin-2400;
+  const overH=Math.floor(Math.abs(overMin)/60),overM=Math.abs(overMin)%60,overSign=overMin>=0?'':'-';
+  const byKW={};
+  ttHistory.forEach(e=>{if(!e.checkin)return;const kw=ttGetKW(e.checkin.slice(0,10));if(!byKW[kw])byKW[kw]=[];byKW[kw].push(e);});
+  const dayNames={1:'Mo.',2:'Di.',3:'Mi.',4:'Do.',5:'Fr.',6:'Sa.',0:'So.'};
+  const kwTables=Object.keys(byKW).sort((a,b)=>a-b).map(kw=>{
+    const rows=byKW[kw].map(e=>{
+      const d=new Date(e.checkin+'');
+      return `<tr><td>${d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</td><td>${dayNames[d.getDay()]||''}</td><td>${ttFmtTime(e.checkin)}</td><td>${ttFmtTime(e.checkout)}</td><td>${ttFmtMinDur(e.totalMin||0)}</td><td>${e.breakMin?ttFmtMinDur(e.breakMin):''}</td><td>${e.project||''}</td><td>${e.nummer||''}</td><td></td><td></td><td>${e.notes||''}</td><td>${e.tag||''}</td></tr>`;
+    }).join('');
+    return `<h3>KW${kw}</h3><table><thead><tr><th>Datum</th><th>Tag</th><th>Startzeit</th><th>Endzeit</th><th>Dauer<br>(ohne Pausen)</th><th>Pausendauer</th><th>Projekt</th><th>Nummer</th><th>Gesamtausgaben</th><th>Ausgaben Beschreibung</th><th>Beschreibung</th><th>Stichworte</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }).join('');
+  const d0=ttHistory[0]?new Date(ttHistory[0].checkin):new Date();
+  const monthYear=d0.toLocaleDateString('de-DE',{month:'long',year:'numeric'}).toUpperCase();
+  const today=new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const pw=window.open('','_blank');
+  pw.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Zeiterfassung</title><style>@page{size:A4 landscape;margin:15mm 12mm;}*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:10px;color:#1a1a1a;}.header{text-align:center;margin-bottom:16px;}.header h1{font-size:14px;font-weight:700;letter-spacing:.05em;margin-top:4px;}.meta{display:grid;grid-template-columns:140px 200px;gap:4px 0;margin:12px 0 0 0;font-size:11px;}.meta .label{font-weight:700;}.meta .bold{font-weight:700;font-size:12px;}h3{font-size:12px;font-weight:700;margin:20px 0 4px 0;}table{width:100%;border-collapse:collapse;font-size:9px;}thead tr{background:#1a1a1a;color:white;}thead th{padding:4px 5px;text-align:left;font-weight:600;white-space:nowrap;border:1px solid #333;}tbody tr:nth-child(even){background:#f5f5f5;}tbody td{padding:4px 5px;border:1px solid #ddd;vertical-align:top;}.footer{margin-top:40px;display:flex;justify-content:space-between;font-size:10px;}.sig-line{width:200px;border-bottom:1px solid #333;margin-top:32px;}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}</style></head><body><div class="header"><h1>MANUELLE ZEITERFASSUNG - ${monthYear}</h1></div><div class="meta"><span class="label">Mitarbeiter:</span><span>${person}</span><span class="label">Gesamtarbeitszeit:</span><span class="bold">${totalH}h ${totalM}min</span><span class="label">Überstunden:</span><span class="bold">${overSign}${overH}h ${overM}min</span></div>${kwTables}<div class="footer"><div><div>Ort, Datum: &nbsp; Filderstadt, den ${today}</div></div><div><div>Unterschrift:</div><div class="sig-line"></div></div></div></body></html>`);
+  pw.document.close();
+  setTimeout(()=>pw.print(),500);
+}
 // ── INIT ─────────────────────────────────────────────
 ttRestoreState();
 
