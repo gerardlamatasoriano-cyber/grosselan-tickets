@@ -3238,7 +3238,7 @@ async function ttDeleteEntry(pageId) {
 // ── EDIT ENTRY MODAL ─────────────────────────────────
 function ttOpenEdit(entry) {
   ttEditEntry = entry;
-  const projectOpts = TT_PROJECTS.map(p=>`<option value="${p}" ${entry.project===p?'selected':''}>${p}</option>`).join('');
+  const projectOpts = `<option value="" ${!entry.project?'selected':''}>— kein Projekt —</option>` + TT_PROJECTS.map(p=>`<option value="${p}" ${entry.project===p?'selected':''}>${p}</option>`).join('');
   const tagOpts = TT_TAGS.map(t=>`<option value="${t}" ${entry.tag===t?'selected':''}>${t}</option>`).join('');
   const overlay = document.createElement('div');
   overlay.id = 'tt-edit-overlay';
@@ -3322,6 +3322,18 @@ async function ttSaveEdit() {
     });
     const data = await r.json().catch(()=>({}));
     if(r.ok){
+      // Actualizar entrada en ttHistory local inmediatamente
+      const idx = ttHistory.findIndex(h => h.pageId === ttEditEntry.pageId);
+      if (idx !== -1) {
+        if (checkin)  ttHistory[idx].checkin  = new Date(checkin).toISOString();
+        if (checkout) ttHistory[idx].checkout = new Date(checkout).toISOString();
+        ttHistory[idx].breakMin  = breakMin;
+        ttHistory[idx].tag       = tag;
+        ttHistory[idx].project   = project;
+        if (editNotes !== undefined) ttHistory[idx].notes = editNotes;
+        const editAusgaben2 = document.getElementById('tt-edit-ausgaben')?.value;
+        if (editAusgaben2 !== '' && editAusgaben2 !== undefined) ttHistory[idx].ausgaben = Number(editAusgaben2);
+      }
       ttCloseEdit(); ttHistoryLoaded=false;
       await ttLoadHistory(); renderTimeTracker();
       showToast('Entry updated ✓');
@@ -3449,7 +3461,14 @@ function ttExportPDF() {
     const rows=byKW[kw].map(e=>{
       const d=new Date(e.checkin+'');
       const ausgStr=e.ausgaben?(Number(e.ausgaben).toFixed(2).replace('.',',')+' €'):'';
-      return `<tr><td>${d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</td><td>${dn[d.getDay()]||''}</td><td>${ttFmtTime(e.checkin)}</td><td>${ttFmtTime(e.checkout)}</td><td>${ttFmtMinDur(e.totalMin||0)}</td><td>${e.breakMin?ttFmtMinDur(e.breakMin):''}</td><td>${e.project||e.projectName||''}</td><td>${e.nummer||''}</td><td>${ausgStr}</td><td>${e.notes||''}</td><td>${e.tag||''}</td></tr>`;
+      // Projekt: nombre del proyecto si existe, si no el tag (ej: "Büro", "Urlaub")
+      // Nummer: campo nummer de Notion (ej: "750", "P240118")
+      // Tag se mueve a Stichworte solo si es distinto del proyecto
+      const projektVal = e.project || '';
+      const nummerVal  = e.nummer  || '';
+      const tagVal     = e.tag     || '';
+      const stichwortVal = e.notes || '';
+      return `<tr><td>${d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</td><td>${dn[d.getDay()]||''}</td><td>${ttFmtTime(e.checkin)}</td><td>${ttFmtTime(e.checkout)}</td><td>${ttFmtMinDur(e.totalMin||0)}</td><td>${e.breakMin?ttFmtMinDur(e.breakMin):''}</td><td>${e.project||''}</td><td>${e.nummer||''}</td><td>${ausgStr}</td><td>${e.notes||''}</td><td>${e.tag||''}</td></tr>`;
     }).join('');
     return `<h3>KW${kw}</h3><table><thead><tr><th>Datum</th><th>Tag</th><th>Startzeit</th><th>Endzeit</th><th>Dauer<br>(ohne Pausen)</th><th>Pausendauer</th><th>Projekt</th><th>Nummer</th><th>Gesamtausgaben</th><th>Beschreibung</th><th>Stichworte</th></tr></thead><tbody>${rows}</tbody></table>`;
   }).join('');
