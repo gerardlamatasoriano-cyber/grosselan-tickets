@@ -1314,7 +1314,7 @@ async function syncFromNotion() {
   btn.innerHTML = '<span class="loading-spinner"></span> Syncing...';
   btn.disabled = true;
   try {
-    const res = await fetch(config.webhookGet, { method: 'GET' });
+    const res = await fetch(config.webhookGet, { method: 'GET', headers: {'x-api-key': 'grosselan-2026-143909273767183'} });
     const data = await res.json();
     const items = Array.isArray(data) ? data : (data.tickets || data.results || []);
     if (items.length) {
@@ -1395,7 +1395,7 @@ async function sendNotification(event, ticket, changedBy) {
   try {
     await fetch(config.webhookNotify, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': 'grosselan-2026-143909273767183' },
       body: JSON.stringify({ event, ticket, changedBy: changedBy || config.username })
     });
   } catch(e) { console.warn('Notification failed:', e); }
@@ -1428,7 +1428,7 @@ async function saveTicket() {
         try {
           await fetch(config.webhookUpdate, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-api-key': 'grosselan-2026-143909273767183' },
             body: JSON.stringify({ ...tickets[idx] })
           });
         } catch(e) { console.warn('N8N update failed:', e); }
@@ -1443,7 +1443,7 @@ async function saveTicket() {
       try {
         const res = await fetch(config.webhookCreate, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': 'grosselan-2026-143909273767183' },
           body: JSON.stringify(newTicket)
         });
         const data = await res.json();
@@ -1543,7 +1543,7 @@ function quickStatus(id, status) {
   if (config.webhookUpdate) {
     fetch(config.webhookUpdate, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-api-key': 'grosselan-2026-143909273767183' },
       body: JSON.stringify(t)
     }).catch(() => {});
   }
@@ -1562,7 +1562,7 @@ async function deleteCurrentTicket() {
     try {
       await fetch(config.webhookDelete, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-api-key': 'grosselan-2026-143909273767183' },
         body: JSON.stringify({ notionId: t.notionId })
       });
     } catch(e) { console.warn('N8N delete failed:', e); }
@@ -2288,7 +2288,7 @@ function mapTicket(t) {
 async function autoSync() {
   if (!config.webhookGet) return;
   try {
-    const res = await fetch(config.webhookGet, { method: 'GET' });
+    const res = await fetch(config.webhookGet, { method: 'GET', headers: {'x-api-key': 'grosselan-2026-143909273767183'} });
     const data = await res.json();
     const items = Array.isArray(data) ? data : (data.tickets || data.results || data.items || []);
     if (items.length) {
@@ -2497,7 +2497,7 @@ async function ttCall(action, extra) {
   }, extra || {});
   try {
     const r = await fetch(TT_WEBHOOKS[action], {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'},
       body: JSON.stringify(payload)
     });
     const data = await r.json().catch(() => ({}));
@@ -2511,7 +2511,7 @@ async function ttLoadHistory(dateFrom, dateTo) {
   if (dateTo)   payload.dateTo   = dateTo;
   try {
     const r = await fetch(TT_WEBHOOKS.history, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'},
       body: JSON.stringify(payload)
     });
     const data = await r.json().catch(() => []);
@@ -2743,6 +2743,7 @@ function ttRenderHistory() {
           <div style="font-size:12px;font-family:IBM Plex Mono,monospace;color:var(--text)">${ttFmtTime(e.checkin)} – ${ttFmtTime(e.checkout)}</div>
           <div style="font-size:18px;font-family:IBM Plex Mono,monospace;font-weight:500;color:var(--accent)">${ttMinToHhMm(e.totalMin||0)}h</div>
           ${e.breakMin ? `<div style="font-size:10px;color:var(--text3)">⏸ ${e.breakMin}min break</div>` : ''}
+          ${e.ausgaben ? `<div style="font-size:11px;font-family:IBM Plex Mono,monospace;color:var(--green);font-weight:500">${Number(e.ausgaben).toFixed(2).replace('.',',')} €</div>` : ''}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
           <button onclick="ttOpenEdit(${JSON.stringify(e).replace(/"/g,'&quot;')})" 
@@ -3078,7 +3079,7 @@ async function ttSaveRunningEdit() {
   if (pageId) {
     try {
       await fetch(TT_WEBHOOKS.timeUpdate, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
+        method: 'POST', headers: {'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'},
         body: JSON.stringify({ pageId, checkin: new Date(checkinVal).toISOString(), breakMin, project, tag, notes })
       });
     } catch(err) { console.warn('Notion update failed:', err); }
@@ -3095,7 +3096,7 @@ async function ttDeleteEntry(pageId) {
   if (!confirm('Delete this time entry? This cannot be undone.')) return;
   try {
     const r = await fetch(TT_WEBHOOKS.timeDelete, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'},
       body: JSON.stringify({ pageId })
     });
     if (r.ok) {
@@ -3148,9 +3149,15 @@ function ttOpenEdit(entry) {
         <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Activity</label>
         <select id="tt-edit-tag" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">${tagOpts}</select>
       </div>
-      <div style="margin-bottom:14px">
-        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description</label>
-        <input type="text" id="tt-edit-notes" value="${entry.notes||''}" placeholder="e.g. I/O testing, documentation..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Gesamtausgaben</label>
+          <input type="number" id="tt-edit-ausgaben" value="${entry.ausgaben||''}" placeholder="14.00" min="0" step="0.50" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:13px;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description</label>
+          <input type="text" id="tt-edit-notes" value="${entry.notes||''}" placeholder="e.g. I/O testing..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+        </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border)">
         <button onclick="ttCloseEdit()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2)">Cancel</button>
@@ -3180,8 +3187,10 @@ async function ttSaveEdit() {
     if (checkout) body.checkout = new Date(checkout).toISOString();
     if (project) body.project = project;
     if (editNotes !== undefined) body.notes = editNotes;
+    const editAusgaben = document.getElementById('tt-edit-ausgaben')?.value;
+    if (editAusgaben !== '' && editAusgaben !== undefined) body.ausgaben = Number(editAusgaben);
     const r = await fetch(TT_WEBHOOKS.timeUpdate, {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'},
       body: JSON.stringify(body)
     });
     const data = await r.json().catch(()=>({}));
@@ -3242,9 +3251,15 @@ function ttOpenManual() {
           <input type="text" id="tt-man-nummer" placeholder="P 250129" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:13px;outline:none">
         </div>
       </div>
-      <div style="margin-bottom:14px">
-        <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description (optional)</label>
-        <input type="text" id="tt-man-notes" placeholder="e.g. I/O testing, KA Steinenbronn..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Gesamtausgaben (optional)</label>
+          <input type="number" id="tt-man-ausgaben" placeholder="14.00" min="0" step="0.50" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:13px;outline:none">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);font-family:IBM Plex Mono,monospace;margin-bottom:6px">Description (optional)</label>
+          <input type="text" id="tt-man-notes" placeholder="e.g. I/O testing, KA Steinenbronn..." style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px;color:var(--text);font-size:13px;outline:none">
+        </div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border)">
         <button onclick="document.getElementById('tt-manual-overlay').remove()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 16px;font-size:13px;cursor:pointer;color:var(--text2)">Cancel</button>
@@ -3268,8 +3283,8 @@ async function ttSaveManual() {
   if(btn){btn.textContent='Saving...';btn.disabled=true;}
   try {
     const r = await fetch(TT_WEBHOOKS.timeCreate, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ person:config.username, project, tag, checkin:new Date(checkin).toISOString(), checkout:new Date(checkout).toISOString(), breakMin, nummer, notes })
+      method:'POST', headers:{'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'},
+      body: JSON.stringify({ person:config.username, project, tag, checkin:new Date(checkin).toISOString(), checkout:new Date(checkout).toISOString(), breakMin, nummer, notes, ausgaben: document.getElementById('tt-man-ausgaben')?.value ? Number(document.getElementById('tt-man-ausgaben').value) : undefined })
     });
     if (r.ok) {
       document.getElementById('tt-manual-overlay')?.remove();
@@ -3306,9 +3321,10 @@ function ttExportPDF() {
   const kwTables=Object.keys(byKW).sort((a,b)=>Number(a)-Number(b)).map(kw=>{
     const rows=byKW[kw].map(e=>{
       const d=new Date(e.checkin+'');
-      return `<tr><td>${d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</td><td>${dn[d.getDay()]||''}</td><td>${ttFmtTime(e.checkin)}</td><td>${ttFmtTime(e.checkout)}</td><td>${ttFmtMinDur(e.totalMin||0)}</td><td>${e.breakMin?ttFmtMinDur(e.breakMin):''}</td><td>${e.project||''}</td><td>${e.nummer||''}</td><td></td><td></td><td>${e.notes||''}</td><td>${e.tag||''}</td></tr>`;
+      const ausgStr=e.ausgaben?(Number(e.ausgaben).toFixed(2).replace('.',',')+' €'):'';
+      return `<tr><td>${d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}</td><td>${dn[d.getDay()]||''}</td><td>${ttFmtTime(e.checkin)}</td><td>${ttFmtTime(e.checkout)}</td><td>${ttFmtMinDur(e.totalMin||0)}</td><td>${e.breakMin?ttFmtMinDur(e.breakMin):''}</td><td>${e.project||e.projectName||''}</td><td>${e.nummer||''}</td><td>${ausgStr}</td><td>${e.notes||''}</td><td>${e.tag||''}</td></tr>`;
     }).join('');
-    return `<h3>KW${kw}</h3><table><thead><tr><th>Datum</th><th>Tag</th><th>Startzeit</th><th>Endzeit</th><th>Dauer<br>(ohne Pausen)</th><th>Pausendauer</th><th>Projekt</th><th>Nummer</th><th>Gesamtausgaben</th><th>Ausgaben Beschreibung</th><th>Beschreibung</th><th>Stichworte</th></tr></thead><tbody>${rows}</tbody></table>`;
+    return `<h3>KW${kw}</h3><table><thead><tr><th>Datum</th><th>Tag</th><th>Startzeit</th><th>Endzeit</th><th>Dauer<br>(ohne Pausen)</th><th>Pausendauer</th><th>Projekt</th><th>Nummer</th><th>Gesamtausgaben</th><th>Beschreibung</th><th>Stichworte</th></tr></thead><tbody>${rows}</tbody></table>`;
   }).join('');
   const d0=ttHistory[0]?new Date(ttHistory[0].checkin):new Date();
   const mY=d0.toLocaleDateString('de-DE',{month:'long',year:'numeric'}).toUpperCase();
@@ -3324,7 +3340,7 @@ ttRestoreState();
 
 async function ttSyncStatus() {
   try {
-    const r = await fetch(TT_WEBHOOKS.status, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ person:config.username }) });
+    const r = await fetch(TT_WEBHOOKS.status, { method:'POST', headers:{'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'}, body:JSON.stringify({ person:config.username }) });
     const data = await r.json().catch(()=>({}));
     if (data.status==='running' && data.entry) {
       ttState='running'; ttStart=new Date(data.entry.checkin).getTime(); ttPausedMs=(data.entry.breakMin||0)*60000; ttPauseStart=null;
