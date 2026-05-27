@@ -1304,32 +1304,24 @@ function updateN8nStatus() {
   }
 }
 
+let isSyncing = false; // F3 — sync lock
+
 async function syncFromNotion() {
   if (!config.webhookGet) {
     showToast('Sync not configured — contact your admin', true);
     return;
   }
+  if (isSyncing) { showToast('Sync already in progress…', true); return; } // F3
+  isSyncing = true;
   const btn = document.querySelector('button[onclick="syncFromNotion()"]');
-  const orig = btn.innerHTML;
-  btn.innerHTML = '<span class="loading-spinner"></span> Syncing...';
-  btn.disabled = true;
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.innerHTML = '<span class="loading-spinner"></span> Syncing...'; btn.disabled = true; }
   try {
     const res = await fetch(config.webhookGet, { method: 'GET', headers: {'x-api-key': 'grosselan-2026-143909273767183'} });
     const data = await res.json();
     const items = Array.isArray(data) ? data : (data.tickets || data.results || []);
     if (items.length) {
-      tickets = items.map(t => ({
-        id: t.id || nextId(),
-        title: t.title || t.Title || '',
-        description: t.description || t.Description || '',
-        project: t.project || t.Project || '',
-        assigned: Array.isArray(t.assigned) ? t.assigned : (t.assigned || t.Assigned ? (t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : []),
-        priority: t.priority || t.Priority || 'Medium',
-        status: t.status || t.Status || 'Pending',
-        deadline: t.deadline || t.Deadline || '',
-        notionId: t.notionId || t.notion_id || t.id || '',
-        createdAt: t.createdAt || new Date().toISOString()
-      }));
+      tickets = items.map(mapTicket); // F2 — usa mapper unificado
       save();
       renderBoard();
       updateMetrics();
@@ -1342,9 +1334,10 @@ async function syncFromNotion() {
     }
   } catch (e) {
     showToast('Sync failed: ' + e.message, true);
+  } finally {
+    isSyncing = false; // F3 — siempre liberar el lock
+    if (btn) { btn.innerHTML = orig; btn.disabled = false; }
   }
-  btn.innerHTML = orig;
-  btn.disabled = false;
 }
 
 function openNewTicket() {
@@ -1514,13 +1507,14 @@ function openTicketDetail(id) {
     notionHtml +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px">' + statusBtns + '</div>';
 
-  // Show/hide edit and delete buttons based on assignment
+  // Show/hide edit and delete buttons based on assignment and notionId
   const isAssigned = assignedArr.includes(config.username);
   const canEdit = config.isAdmin || isAssigned;
   const editBtn = document.getElementById('edit-ticket-btn');
   const deleteBtn = document.getElementById('delete-ticket-btn');
   if (editBtn) editBtn.style.display = canEdit ? 'inline-flex' : 'none';
-  if (deleteBtn) deleteBtn.style.display = canEdit ? 'inline-flex' : 'none';
+  // F4 — ocultar delete si no hay notionId (sin pageId el webhook fallaría)
+  if (deleteBtn) deleteBtn.style.display = (canEdit && t.notionId) ? 'inline-flex' : 'none';
 
   openModal('detail-modal');
 }
@@ -2269,19 +2263,22 @@ updateMetrics();
 let autoSyncCountdown = 300;
 let autoSyncInterval = null;
 
+// F2 — Mapper unificado. Única fuente de verdad para tickets de Notion.
+// Usado en: syncFromNotion(), autoSync(), y cualquier futura importación.
 function mapTicket(t) {
   return {
-    id: t.id || t.ID || '',
-    title: t.title || t.Title || t.name || t.Name || '',
+    id:          t.id          || t.ID          || nextId(),
+    title:       t.title       || t.Title       || t.name  || t.Name  || '',
     description: t.description || t.Description || '',
-    project: t.project || t.Project || '',
-    assigned: Array.isArray(t.assigned) ? t.assigned : Array.isArray(t.Assigned) ? t.Assigned :
-              (t.assigned || t.Assigned) ? String(t.assigned || t.Assigned).split(',').map(s=>s.trim()).filter(Boolean) : [],
-    priority: t.priority || t.Priority || 'Medium',
-    status: t.status || t.Status || 'Pending',
-    deadline: t.deadline || t.Deadline || '',
-    notionId: t.notionId || t.notion_id || t.notionID || t.pageId || t.page_id || '',
-    createdAt: t.createdAt || t.created_at || new Date().toISOString()
+    project:     t.project     || t.Project     || '',
+    assigned:    Array.isArray(t.assigned)  ? t.assigned  :
+                 Array.isArray(t.Assigned)  ? t.Assigned  :
+                 (t.assigned || t.Assigned) ? String(t.assigned || t.Assigned).split(',').map(s => s.trim()).filter(Boolean) : [],
+    priority:    t.priority    || t.Priority    || 'Medium',
+    status:      t.status      || t.Status      || 'Pending',
+    deadline:    t.deadline    || t.Deadline    || '',
+    notionId:    t.notionId    || t.notion_id   || t.notionID || t.pageId || t.page_id || '',
+    createdAt:   t.createdAt   || t.created_at  || new Date().toISOString()
   };
 }
 
@@ -2944,19 +2941,25 @@ function ttRenderSummaryTT() {
 
 // ── ACTIONS ──────────────────────────────────────────
 async function ttCheckin() {
-  const res = await ttCall('checkin');
+  // N7 — leer valores del DOM ANTES de ttCall (que puede re-renderizar)
+  const projEl  = document.getElementById('tt-project');
+  const tagEl   = document.getElementById('tt-tag');
+  const notesEl = document.getElementById('tt-notes');
+  const projVal  = projEl  ? projEl.value.trim()  : '';
+  const tagVal   = tagEl   ? tagEl.value.trim()   : '';
+  const notesVal = notesEl ? notesEl.value.trim()  : '';
+
+  const res = await ttCall('checkin', { project: projVal, tag: tagVal, notes: notesVal });
   if (res.ok) {
-    ttStart=Date.now(); ttPausedMs=0;
-    const proj=document.getElementById('tt-project');
-    const tag=document.getElementById('tt-tag');
-    const notesEl = document.getElementById('tt-notes');
-    const notes = notesEl ? notesEl.value.trim() : '';
-    ttEntries.push({project:proj?.value||'',tag:tag?.value||'',notes,startTime:new Date().toISOString(),endTime:null,status:'active',breakMs:0});
-    ttState='running'; ttSaveState(); showToast('Checked in ✓'); renderTimeTracker();
-  } else if (res.status===409) {
+    ttStart = Date.now(); ttPausedMs = 0;
+    ttEntries.push({ project: projVal, tag: tagVal, notes: notesVal,
+                     startTime: new Date().toISOString(), endTime: null,
+                     status: 'active', breakMs: 0 });
+    ttState = 'running'; ttSaveState(); showToast('Checked in ✓'); renderTimeTracker();
+  } else if (res.status === 409) {
     showToast('Active entry found on server — syncing...', true);
     await ttSyncStatus();
-  } else { showToast('Connection error',true); }
+  } else { showToast('Connection error', true); }
 }
 async function ttPause() {
   const res=await ttCall('pause');
@@ -3340,14 +3343,64 @@ ttRestoreState();
 
 async function ttSyncStatus() {
   try {
-    const r = await fetch(TT_WEBHOOKS.status, { method:'POST', headers:{'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'}, body:JSON.stringify({ person:config.username }) });
-    const data = await r.json().catch(()=>({}));
-    if (data.status==='running' && data.entry) {
-      ttState='running'; ttStart=new Date(data.entry.checkin).getTime(); ttPausedMs=(data.entry.breakMin||0)*60000; ttPauseStart=null;
-      if (!ttEntries.length) ttEntries=[{project:data.entry.project||'',tag:data.entry.tag||'',notes:'',startTime:data.entry.checkin,endTime:null,status:'active',breakMs:ttPausedMs}];
-      ttSaveState(); renderTimeTracker();
-    } else if (data.status==='idle' && ttState!=='idle') {
-      ttState='idle'; ttStart=null; ttPausedMs=0; ttClearState(); renderTimeTracker();
+    const r = await fetch(TT_WEBHOOKS.status, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'},
+      body: JSON.stringify({ person: config.username })
+    });
+    const data = await r.json().catch(() => ({}));
+    if (data.status === 'running' && data.entry) {
+      ttState = 'running';
+      ttStart = new Date(data.entry.checkin).getTime();
+      ttPausedMs = (data.entry.breakMin || 0) * 60000;
+      ttPauseStart = null;
+      if (!ttEntries.length) {
+        ttEntries = [{
+          project:   data.entry.project || '',
+          tag:       data.entry.tag     || '',
+          notes:     data.entry.notes   || '',
+          startTime: data.entry.checkin,
+          endTime:   null,
+          status:    'active',
+          breakMs:   ttPausedMs
+        }];
+      }
+      ttSaveState();
+      renderTimeTracker();
+      // N6 — restaurar project y tag en selectores tras render
+      requestAnimationFrame(() => {
+        const projEl = document.getElementById('tt-project');
+        const tagEl  = document.getElementById('tt-tag');
+        if (projEl && data.entry.project) projEl.value = data.entry.project;
+        if (tagEl  && data.entry.tag)     tagEl.value  = data.entry.tag;
+      });
+    } else if (data.status === 'paused' && data.entry) {
+      // N6 — también manejar estado paused desde servidor
+      ttState = 'paused';
+      ttStart = new Date(data.entry.checkin).getTime();
+      ttPausedMs = (data.entry.breakMin || 0) * 60000;
+      ttPauseStart = Date.now();
+      if (!ttEntries.length) {
+        ttEntries = [{
+          project:   data.entry.project || '',
+          tag:       data.entry.tag     || '',
+          notes:     data.entry.notes   || '',
+          startTime: data.entry.checkin,
+          endTime:   null,
+          status:    'paused',
+          breakMs:   ttPausedMs
+        }];
+      }
+      ttSaveState();
+      renderTimeTracker();
+      requestAnimationFrame(() => {
+        const projEl = document.getElementById('tt-project');
+        const tagEl  = document.getElementById('tt-tag');
+        if (projEl && data.entry.project) projEl.value = data.entry.project;
+        if (tagEl  && data.entry.tag)     tagEl.value  = data.entry.tag;
+      });
+    } else if (data.status === 'idle' && ttState !== 'idle') {
+      ttState = 'idle'; ttStart = null; ttPausedMs = 0; ttClearState(); renderTimeTracker();
     }
   } catch(e) {}
 }
