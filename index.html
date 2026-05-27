@@ -580,12 +580,16 @@
     width: 6px; height: 6px;
     border-radius: 50%;
     background: var(--green);
-    animation: pulse 2s infinite;
+    flex-shrink: 0;
+    transition: background 0.3s;
   }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
+  .sync-dot.syncing { animation: spin-pulse 0.8s linear infinite; }
+  .sync-dot.ok      { animation: pulse 3s infinite; }
+  .sync-dot.warn    { animation: pulse-warn 1.5s infinite; background: var(--yellow); }
+  .sync-dot.error-dot { background: var(--red); animation: none; }
+  @keyframes pulse      { 0%,100%{opacity:1} 50%{opacity:.35} }
+  @keyframes pulse-warn { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+  @keyframes spin-pulse { 0%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(1.5)} 100%{opacity:1;transform:scale(1)} }
 
   /* TABLE VIEW */
   .table-wrapper { flex: 1; overflow: auto; padding: 16px 24px; }
@@ -1294,13 +1298,16 @@ function updateN8nStatus() {
     dot.classList.add('connected');
     dot.classList.remove('error');
     txt.textContent = 'N8N connected';
-    syncTxt.textContent = 'Notion sync enabled · Last sync: never — press "Sync Notion" to load tickets';
-    document.getElementById('sync-dot').style.background = 'var(--green)';
+    const ago = lastSyncTime ? syncAgo(lastSyncTime) : 'never';
+    syncTxt.textContent = `Notion sync enabled · Last sync: ${ago}`;
+    const dot2 = document.getElementById('sync-dot');
+    if (dot2) { dot2.className = 'sync-dot ' + (lastSyncTime ? 'ok' : 'warn'); }
   } else {
     dot.classList.remove('connected');
     txt.textContent = 'N8N disconnected';
     syncTxt.textContent = 'Configure N8N webhook URL in Settings to enable Notion sync';
-    document.getElementById('sync-dot').style.background = 'var(--yellow)';
+    const dotD = document.getElementById('sync-dot');
+    if (dotD) dotD.className = 'sync-dot warn';
   }
 }
 
@@ -1313,6 +1320,7 @@ async function syncFromNotion() {
   }
   if (isSyncing) { showToast('Sync already in progress…', true); return; } // F3
   isSyncing = true;
+  setSyncStatus('syncing', 'Syncing from Notion…');
   const btn = document.querySelector('button[onclick="syncFromNotion()"]');
   const orig = btn ? btn.innerHTML : '';
   if (btn) { btn.innerHTML = '<span class="loading-spinner"></span> Syncing...'; btn.disabled = true; }
@@ -1326,13 +1334,15 @@ async function syncFromNotion() {
       renderBoard();
       updateMetrics();
       refreshFilters();
-      document.getElementById('sync-text').textContent = `Synced from Notion · ${items.length} tickets · ${new Date().toLocaleTimeString()}`;
+      lastSyncTime = Date.now();
+      setSyncStatus('ok', `Synced from Notion · ${items.length} tickets · ${new Date().toLocaleTimeString()} · Next sync in 5:00`);
       showToast(`${items.length} tickets loaded from Notion`);
       checkDeadlineWarnings();
     } else {
       showToast('No tickets returned from Notion', true);
     }
   } catch (e) {
+    setSyncStatus('error-dot', `Sync failed · ${e.message} · ${new Date().toLocaleTimeString()}`);
     showToast('Sync failed: ' + e.message, true);
   } finally {
     isSyncing = false; // F3 — siempre liberar el lock
@@ -2261,6 +2271,26 @@ updateMetrics();
 
 // ── AUTO-SYNC ─────────────────────────────────────────
 let autoSyncCountdown = 300;
+let lastSyncTime = null; // U2 — timestamp de la última sync exitosa
+
+// U2 — Tiempo relativo legible
+function syncAgo(ts) {
+  if (!ts) return 'never';
+  const sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 10)  return 'just now';
+  if (sec < 60)  return `${sec}s ago`;
+  if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
+  return `${Math.floor(sec/3600)}h ago`;
+}
+
+// U2 — Actualizar dot y texto de sync
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  if (!dot || !txt) return;
+  dot.className = 'sync-dot ' + state;
+  txt.textContent = msg;
+}
 let autoSyncInterval = null;
 
 // F2 — Mapper unificado. Única fuente de verdad para tickets de Notion.
@@ -2292,7 +2322,8 @@ async function autoSync() {
       tickets = items.map(mapTicket);
       save(); renderBoard(); updateMetrics(); refreshFilters();
       const now = new Date();
-      document.getElementById('sync-text').textContent = `Auto-synced from Notion · ${items.length} tickets · ${now.toLocaleTimeString()} · Next sync in 5:00`;
+      lastSyncTime = Date.now();
+      setSyncStatus('ok', `Auto-synced · ${items.length} tickets · ${now.toLocaleTimeString()} · Next sync in 5:00`);
       autoSyncCountdown = 300;
     }
   } catch(e) { console.warn('Auto-sync failed:', e); }
@@ -2311,7 +2342,10 @@ function startAutoSync() {
       const sec = String(autoSyncCountdown % 60).padStart(2, '0');
       const syncEl = document.getElementById('sync-text');
       if (syncEl && syncEl.textContent.includes('Next sync in')) {
-        syncEl.textContent = syncEl.textContent.replace(/Next sync in \d+:\d+/, `Next sync in ${min}:${sec}`);
+        const ago = syncAgo(lastSyncTime);
+        syncEl.textContent = syncEl.textContent
+          .replace(/Next sync in \d+:\d+/, `Next sync in ${min}:${sec}`)
+          .replace(/synced[^·]*·/, `synced ${ago} ·`);
       }
     }
   }, 1000);
