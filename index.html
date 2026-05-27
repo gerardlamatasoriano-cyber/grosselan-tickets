@@ -1311,6 +1311,27 @@ function updateN8nStatus() {
   }
 }
 
+var lastSyncTime = null; // U2 — timestamp de la última sync exitosa
+
+// U2 — Tiempo relativo legible
+function syncAgo(ts) {
+  if (!ts) return 'never';
+  const sec = Math.floor((Date.now() - ts) / 1000);
+  if (sec < 10)  return 'just now';
+  if (sec < 60)  return `${sec}s ago`;
+  if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
+  return `${Math.floor(sec/3600)}h ago`;
+}
+
+// U2 — Actualizar dot y texto de sync
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  if (!dot || !txt) return;
+  dot.className = 'sync-dot ' + state;
+  txt.textContent = msg;
+}
+
 let isSyncing = false; // F3 — sync lock
 
 async function syncFromNotion() {
@@ -2271,26 +2292,7 @@ updateMetrics();
 
 // ── AUTO-SYNC ─────────────────────────────────────────
 let autoSyncCountdown = 300;
-let lastSyncTime = null; // U2 — timestamp de la última sync exitosa
 
-// U2 — Tiempo relativo legible
-function syncAgo(ts) {
-  if (!ts) return 'never';
-  const sec = Math.floor((Date.now() - ts) / 1000);
-  if (sec < 10)  return 'just now';
-  if (sec < 60)  return `${sec}s ago`;
-  if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
-  return `${Math.floor(sec/3600)}h ago`;
-}
-
-// U2 — Actualizar dot y texto de sync
-function setSyncStatus(state, msg) {
-  const dot = document.getElementById('sync-dot');
-  const txt = document.getElementById('sync-text');
-  if (!dot || !txt) return;
-  dot.className = 'sync-dot ' + state;
-  txt.textContent = msg;
-}
 let autoSyncInterval = null;
 
 // F2 — Mapper unificado. Única fuente de verdad para tickets de Notion.
