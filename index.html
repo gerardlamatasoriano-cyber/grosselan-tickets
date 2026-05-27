@@ -591,6 +591,36 @@
   @keyframes pulse-warn { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
   @keyframes spin-pulse { 0%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(1.5)} 100%{opacity:1;transform:scale(1)} }
 
+  /* U3 — N8N offline banner */
+  #n8n-offline-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 24px;
+    background: var(--red-bg);
+    border-bottom: 1px solid var(--red-border);
+    font-size: 12px;
+    color: var(--red);
+    font-family: 'IBM Plex Mono', monospace;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  #n8n-offline-banner.visible { display: flex; }
+  #n8n-offline-banner .n8n-offline-icon { font-size: 14px; flex-shrink: 0; }
+  #n8n-offline-banner .n8n-offline-retry {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--red-border);
+    color: var(--red);
+    border-radius: var(--radius);
+    padding: 3px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  #n8n-offline-banner .n8n-offline-retry:hover { background: var(--red-bg); }
+
   /* TABLE VIEW */
   .table-wrapper { flex: 1; overflow: auto; padding: 16px 24px; }
   .tickets-table {
@@ -848,6 +878,14 @@
   <div class="sync-bar">
     <div class="sync-dot" id="sync-dot"></div>
     <span id="sync-text">Configure N8N webhook URL in Settings to enable Notion sync</span>
+  </div>
+
+
+  <!-- U3 — N8N offline banner -->
+  <div id="n8n-offline-banner">
+    <span class="n8n-offline-icon">⚠</span>
+    <span id="n8n-offline-msg">N8N is not responding — changes won't be saved until connection is restored</span>
+    <button class="n8n-offline-retry" onclick="n8nRetryConnection()">Retry</button>
   </div>
 
   <!-- METRICS -->
@@ -1290,6 +1328,51 @@ function updateUserDisplay() {
   if (settingsSection) settingsSection.style.display = show;
 }
 
+// U3 — N8N offline detection
+let n8nOfflineCount  = 0;
+const N8N_OFFLINE_THRESHOLD = 2; // fallos consecutivos antes de mostrar banner
+
+function n8nMarkFailure(context) {
+  n8nOfflineCount++;
+  if (n8nOfflineCount >= N8N_OFFLINE_THRESHOLD) {
+    const banner = document.getElementById('n8n-offline-banner');
+    const msg    = document.getElementById('n8n-offline-msg');
+    if (banner) banner.classList.add('visible');
+    if (msg) msg.textContent = `N8N not responding (${context}) — changes won't be saved until connection is restored`;
+    setSyncStatus('error-dot', `N8N offline · Last attempt: ${new Date().toLocaleTimeString()}`);
+  }
+}
+
+function n8nMarkSuccess() {
+  if (n8nOfflineCount >= N8N_OFFLINE_THRESHOLD) {
+    const banner = document.getElementById('n8n-offline-banner');
+    if (banner) banner.classList.remove('visible');
+  }
+  n8nOfflineCount = 0;
+}
+
+async function n8nRetryConnection() {
+  const btn = document.querySelector('.n8n-offline-retry');
+  if (btn) btn.textContent = 'Retrying…';
+  try {
+    const r = await fetch(config.webhookGet || TT_WEBHOOKS.status, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': 'grosselan-2026-143909273767183' },
+      body: JSON.stringify({ person: config.username || 'ping' })
+    });
+    if (r.ok || r.status === 401 || r.status === 429) {
+      n8nMarkSuccess();
+      showToast('N8N connection restored ✓');
+      setSyncStatus('ok', `Connection restored · ${new Date().toLocaleTimeString()}`);
+    } else {
+      n8nMarkFailure('retry');
+    }
+  } catch(e) {
+    n8nMarkFailure('retry');
+  }
+  if (btn) btn.textContent = 'Retry';
+}
+
 var lastSyncTime = null; // U2 — timestamp de la última sync exitosa
 
 // U2 — Tiempo relativo legible
@@ -1357,6 +1440,7 @@ async function syncFromNotion() {
       renderBoard();
       updateMetrics();
       refreshFilters();
+      n8nMarkSuccess();
       lastSyncTime = Date.now();
       setSyncStatus('ok', `Synced from Notion · ${items.length} tickets · ${new Date().toLocaleTimeString()} · Next sync in 5:00`);
       showToast(`${items.length} tickets loaded from Notion`);
@@ -1365,6 +1449,7 @@ async function syncFromNotion() {
       showToast('No tickets returned from Notion', true);
     }
   } catch (e) {
+    n8nMarkFailure('sync');
     setSyncStatus('error-dot', `Sync failed · ${e.message} · ${new Date().toLocaleTimeString()}`);
     showToast('Sync failed: ' + e.message, true);
   } finally {
@@ -2536,8 +2621,9 @@ async function ttCall(action, extra) {
       body: JSON.stringify(payload)
     });
     const data = await r.json().catch(() => ({}));
+    if (r.ok) n8nMarkSuccess(); else if (r.status === 0) n8nMarkFailure(action);
     return { ok: r.ok, status: r.status, data };
-  } catch(e) { return { ok: false, status: 0, data: {} }; }
+  } catch(e) { n8nMarkFailure(action); return { ok: false, status: 0, data: {} }; }
 }
 
 async function ttLoadHistory(dateFrom, dateTo) {
