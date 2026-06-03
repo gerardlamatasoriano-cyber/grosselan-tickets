@@ -3462,13 +3462,13 @@ function ttExportPDF() {
   const person=config.username;
   const totalMin=ttHistory.reduce((s,e)=>s+(e.totalMin||0),0);
   const totalH=Math.floor(totalMin/60),totalM=totalMin%60;
+  const byKW={};
+  ttHistory.forEach(e=>{if(!e.checkin)return;const kw=ttGetKW(e.checkin.slice(0,10));if(!byKW[kw])byKW[kw]=[];byKW[kw].push(e);});
   // Calcular semanas reales del historial (no asumir siempre 40h)
   const numKW = Object.keys(byKW).length || 1;
   const sollMin = numKW * 2400; // 40h = 2400min por semana
   const overMin = totalMin - sollMin;
   const overH=Math.floor(Math.abs(overMin)/60),overM=Math.abs(overMin)%60,overSign=overMin>=0?'':'-';
-  const byKW={};
-  ttHistory.forEach(e=>{if(!e.checkin)return;const kw=ttGetKW(e.checkin.slice(0,10));if(!byKW[kw])byKW[kw]=[];byKW[kw].push(e);});
   const dn={1:'Mo.',2:'Di.',3:'Mi.',4:'Do.',5:'Fr.',6:'Sa.',0:'So.'};
   const kwTables=Object.keys(byKW).sort((a,b)=>Number(a)-Number(b)).map(kw=>{
     const rows=byKW[kw].map(e=>{
