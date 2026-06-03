@@ -2523,7 +2523,8 @@ const TT_PROJECTS = [
   'Elektrotechnische Sanierung RÜB Fischweier',
   'KFP – MSE Filterpresse','Schwäbisch Hall / HST',
   'KA Neurod','KA Reutlingen','KA Waiblingen',
-  'KA Steinenbronn','KA Strudelbach'
+  'KA Steinenbronn','KA Strudelbach',
+  'Fischweier RÜB'
 ];
 const TT_TAGS = [
   '501 Montage','900 Fahrzeit','750 Büro',
@@ -3461,7 +3462,10 @@ function ttExportPDF() {
   const person=config.username;
   const totalMin=ttHistory.reduce((s,e)=>s+(e.totalMin||0),0);
   const totalH=Math.floor(totalMin/60),totalM=totalMin%60;
-  const overMin=totalMin-2400;
+  // Calcular semanas reales del historial (no asumir siempre 40h)
+  const numKW = Object.keys(byKW).length || 1;
+  const sollMin = numKW * 2400; // 40h = 2400min por semana
+  const overMin = totalMin - sollMin;
   const overH=Math.floor(Math.abs(overMin)/60),overM=Math.abs(overMin)%60,overSign=overMin>=0?'':'-';
   const byKW={};
   ttHistory.forEach(e=>{if(!e.checkin)return;const kw=ttGetKW(e.checkin.slice(0,10));if(!byKW[kw])byKW[kw]=[];byKW[kw].push(e);});
