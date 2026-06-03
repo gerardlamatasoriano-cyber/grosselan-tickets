@@ -3299,46 +3299,55 @@ function ttCloseEdit() {
 }
 
 async function ttSaveEdit() {
-  const checkin  = document.getElementById('tt-edit-checkin').value;
-  const checkout = document.getElementById('tt-edit-checkout').value;
-  const breakMin = parseInt(document.getElementById('tt-edit-break').value)||0;
-  const tag      = document.getElementById('tt-edit-tag').value;
-  const project  = document.getElementById('tt-edit-project')?.value || '';
-  if (!ttEditEntry?.pageId) { showToast('No page ID — cannot save',true); return; }
+  const checkin    = document.getElementById('tt-edit-checkin').value;
+  const checkout   = document.getElementById('tt-edit-checkout').value;
+  const breakMin   = parseInt(document.getElementById('tt-edit-break').value)||0;
+  const tag        = document.getElementById('tt-edit-tag').value;
+  const project    = document.getElementById('tt-edit-project')?.value || '';
+  const editNotes  = document.getElementById('tt-edit-notes')?.value.trim();
+  const editAusgaben = document.getElementById('tt-edit-ausgaben')?.value;
+  const ausgaben   = (editAusgaben !== '' && editAusgaben !== undefined) ? Number(editAusgaben) : undefined;
+
   const btn = document.querySelector('#tt-edit-overlay button[onclick="ttSaveEdit()"]');
-  if(btn){btn.textContent='Saving...';btn.disabled=true;}
-  try {
-    const editNotes = document.getElementById('tt-edit-notes')?.value.trim();
-    const body = { pageId:ttEditEntry.pageId, breakMin, tag };
-    if (checkin) body.checkin = new Date(checkin).toISOString();
-    if (checkout) body.checkout = new Date(checkout).toISOString();
-    if (project) body.project = project;
-    if (editNotes !== undefined) body.notes = editNotes;
-    const editAusgaben = document.getElementById('tt-edit-ausgaben')?.value;
-    if (editAusgaben !== '' && editAusgaben !== undefined) body.ausgaben = Number(editAusgaben);
-    const r = await fetch(TT_WEBHOOKS.timeUpdate, {
-      method:'POST', headers:{'Content-Type':'application/json', 'x-api-key': 'grosselan-2026-143909273767183'},
-      body: JSON.stringify(body)
-    });
-    const data = await r.json().catch(()=>({}));
-    if(r.ok){
-      // Actualizar entrada en ttHistory local inmediatamente
-      const idx = ttHistory.findIndex(h => h.pageId === ttEditEntry.pageId);
-      if (idx !== -1) {
-        if (checkin)  ttHistory[idx].checkin  = new Date(checkin).toISOString();
-        if (checkout) ttHistory[idx].checkout = new Date(checkout).toISOString();
-        ttHistory[idx].breakMin  = breakMin;
-        ttHistory[idx].tag       = tag;
-        ttHistory[idx].project   = project;
-        if (editNotes !== undefined) ttHistory[idx].notes = editNotes;
-        const editAusgaben2 = document.getElementById('tt-edit-ausgaben')?.value;
-        if (editAusgaben2 !== '' && editAusgaben2 !== undefined) ttHistory[idx].ausgaben = Number(editAusgaben2);
-      }
-      ttCloseEdit(); ttHistoryLoaded=false;
-      await ttLoadHistory(); renderTimeTracker();
-      showToast('Entry updated ✓');
-    } else { showToast('Save failed: '+(data.error||r.status),true); }
-  } catch(e){ showToast('Connection error',true); }
+  if (btn) { btn.textContent = 'Saving...'; btn.disabled = true; }
+
+  // 1. Actualizar SIEMPRE en ttHistory local (con o sin pageId)
+  const localIdx = ttHistory.findIndex(h =>
+    ttEditEntry.pageId ? h.pageId === ttEditEntry.pageId :
+    h.checkin === ttEditEntry.checkin && h.checkout === ttEditEntry.checkout
+  );
+  if (localIdx !== -1) {
+    if (checkin)  ttHistory[localIdx].checkin  = new Date(checkin).toISOString();
+    if (checkout) ttHistory[localIdx].checkout = new Date(checkout).toISOString();
+    ttHistory[localIdx].breakMin = breakMin;
+    ttHistory[localIdx].tag      = tag;
+    ttHistory[localIdx].project  = project;
+    if (editNotes  !== undefined) ttHistory[localIdx].notes    = editNotes;
+    if (ausgaben   !== undefined) ttHistory[localIdx].ausgaben = ausgaben;
+  }
+
+  // 2. Sincronizar con Notion solo si hay pageId
+  if (ttEditEntry?.pageId) {
+    try {
+      const body = { pageId: ttEditEntry.pageId, breakMin, tag };
+      if (checkin)  body.checkin  = new Date(checkin).toISOString();
+      if (checkout) body.checkout = new Date(checkout).toISOString();
+      if (project)  body.project  = project;
+      if (editNotes  !== undefined) body.notes    = editNotes;
+      if (ausgaben   !== undefined) body.ausgaben = ausgaben;
+      const r = await fetch(TT_WEBHOOKS.timeUpdate, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': 'grosselan-2026-143909273767183' },
+        body: JSON.stringify(body)
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) { showToast('Notion sync failed: ' + (data.error || r.status), true); }
+    } catch(err) { showToast('Connection error — saved locally only', true); }
+  }
+
+  ttCloseEdit();
+  renderTimeTracker();
+  showToast('Entry updated ✓');
 }
 
 // ── MANUAL ENTRY MODAL ───────────────────────────────
