@@ -2549,6 +2549,39 @@ let ttHistoryLoaded = false;
 let ttEditEntry = null;    // entry being edited
 
 // ── Persist state ────────────────────────────────────
+// ── TT HISTORY PERSISTENCE ───────────────────────────────────────────
+const TT_HISTORY_KEY = 'tt_history_edits'; // sobreescrituras locales por checkin+checkout
+
+function ttSaveHistoryEdits() {
+  // Guarda solo los campos editables de cada entrada (no todo el historial)
+  const edits = {};
+  ttHistory.forEach(e => {
+    const key = e.pageId || (e.checkin + '__' + e.checkout);
+    if (e.project || e.notes) {
+      edits[key] = { project: e.project || '', notes: e.notes || '', tag: e.tag || '', breakMin: e.breakMin || 0 };
+    }
+  });
+  localStorage.setItem(TT_HISTORY_KEY, JSON.stringify(edits));
+}
+
+function ttApplyHistoryEdits() {
+  // Aplica las ediciones guardadas sobre ttHistory tras cargarlo del servidor
+  try {
+    const raw = localStorage.getItem(TT_HISTORY_KEY);
+    if (!raw) return;
+    const edits = JSON.parse(raw);
+    ttHistory.forEach(e => {
+      const key = e.pageId || (e.checkin + '__' + e.checkout);
+      if (edits[key]) {
+        if (edits[key].project)  e.project  = edits[key].project;
+        if (edits[key].notes)    e.notes    = edits[key].notes;
+        if (edits[key].tag)      e.tag      = edits[key].tag;
+        if (edits[key].breakMin) e.breakMin = edits[key].breakMin;
+      }
+    });
+  } catch(err) {}
+}
+
 function ttSaveState() {
   localStorage.setItem('tt_state', JSON.stringify({
     state: ttState, start: ttStart, pausedMs: ttPausedMs,
@@ -2638,6 +2671,7 @@ async function ttLoadHistory(dateFrom, dateTo) {
     });
     const data = await r.json().catch(() => []);
     ttHistory = Array.isArray(data) ? data : (data.entries || []);
+    ttApplyHistoryEdits(); // aplicar ediciones locales sobre datos del servidor
     ttHistoryLoaded = true;
   } catch(e) { ttHistory = []; ttHistoryLoaded = true; }
 }
@@ -3346,6 +3380,7 @@ async function ttSaveEdit() {
     } catch(err) { showToast('Connection error — saved locally only', true); }
   }
 
+  ttSaveHistoryEdits(); // persistir ediciones localmente
   ttCloseEdit();
   renderTimeTracker();
   showToast('Entry updated ✓');
